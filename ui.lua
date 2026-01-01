@@ -1275,7 +1275,7 @@ local Library do
             })  NewKey:AddToTheme({TextColor3 = "Text"})
 
             function NewKey:Set(Mode, Name, Key)
-                NewKey.Instance.Text = "( " .. Mode .. " ) " .. Name .. " - " .. Key .. " "
+                NewKey.Instance.Text = "(" .. Mode .. ")  " .. Name .. "   |   [" .. Key .. "] "
             end
 
             function NewKey:SetStatus(Bool)
