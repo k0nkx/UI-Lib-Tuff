@@ -1061,94 +1061,224 @@ local Library do
     end
 
     Library.Watermark = function(self, Text, Icon)
-        local Watermark = { }
-
-        local Items = { } do
-            Items["Watermark"] = Instances:Create("Frame", {
-                Parent = Library.Holder.Instance,
-                BorderColor3 = FromRGB(0, 0, 0),
-                AnchorPoint = Vector2New(0.5, 0),
-                Name = "\0",
-                Position = UDim2New(0.5, 0, 0, 20),
-                Size = UDim2New(0, 0, 0, 25),
-                BorderSizePixel = 2,
-                AutomaticSize = Enum.AutomaticSize.X,
-                BackgroundColor3 = FromRGB(12, 12, 12)
-            })  Items["Watermark"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
-
-            Items["Watermark"]:MakeDraggable()
-
-            Instances:Create("UIStroke", {
-                Parent = Items["Watermark"].Instance,
-                Color = FromRGB(68, 68, 68),
-                LineJoinMode = Enum.LineJoinMode.Miter,
-                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-            }):AddToTheme({Color = "Border"})
-
-            Items["Text"] = Instances:Create("TextLabel", {
-                Parent = Items["Watermark"].Instance,
-                FontFace = Library.Font,
-                TextColor3 = FromRGB(180, 180, 180),
-                BorderColor3 = FromRGB(0, 0, 0),
-                Text = Text,
-                Name = "\0",
-                BackgroundTransparency = 1,
-                Size = UDim2New(0, 0, 1, 0),
-                BorderSizePixel = 0,
-                AutomaticSize = Enum.AutomaticSize.X,
-                TextSize = 12,
-                BackgroundColor3 = FromRGB(255, 255, 255)
-            })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
-
-            Instances:Create("UIPadding", {
-                Parent = Items["Watermark"].Instance,
-                PaddingRight = UDimNew(0, 8),
-                PaddingLeft = UDimNew(0, 8)
-            }) 
-
-            Items["Liner"] = Instances:Create("Frame", {
-                Parent = Items["Watermark"].Instance,
-                Name = "\0",
-                Position = UDim2New(0, -8, 0, 0),
-                BorderColor3 = FromRGB(0, 0, 0),
-                Size = UDim2New(1, 16, 0, 2),
-                BorderSizePixel = 0,
-                BackgroundColor3 = FromRGB(31, 226, 130)
-            })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
-
-            Instances:Create("UIGradient", {
-                Parent = Items["Liner"].Instance,
-                Rotation = 90,
-                Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(94, 94, 94))}
-            }) 
-
-            if Icon then 
-                if type(Icon) == "table" then
-                    Items["Icon"] = Instances:Create("ImageLabel", {
-                        Parent = Items["Watermark"].Instance,
-                        ImageColor3 = Icon[2] or FromRGB(255, 255, 255),
-                        ScaleType = Enum.ScaleType.Fit,
-                        BorderColor3 = FromRGB(0, 0, 0),
-                        Name = "\0",
-                        Image = "rbxassetid://" .. Icon[1],
-                        BackgroundTransparency = 1,
-                        Position = UDim2New(0, -3, 0, 4),
-                        Size = UDim2New(0, 18, 0, 18),
-                        BorderSizePixel = 0,
-                        BackgroundColor3 = FromRGB(255, 255, 255)
-                    }) 
-
-                    Items["Text"].Instance.Position = UDim2New(0, 20, 0, 0)
-                end
+    local Watermark = { }
+    local Items = { }
+    local EnabledOptions = {}
+    local UpdateConnection = nil
+    
+    -- Default options table
+    local Options = {
+        ShowPing = true,
+        ShowPlayerCount = true,
+        ShowDate = true,
+        ShowTime = true,
+        ShowFPS = true,
+        ShowGameName = true,
+        ShowPlayerName = false,
+        ShowDisplayName = false,
+        UpdateInterval = 0.5, -- Update every 0.5 seconds
+        DateFormat = "d-m-Y", -- 1-2-2026
+        TimeFormat = "24h" -- 24-hour format
+    }
+    
+    -- Function to update the watermark text
+    local function UpdateWatermarkText()
+        local parts = {Text}
+        
+        if Options.ShowFPS then
+            local fps = math.floor(workspace:GetRealPhysicsFPS() or 60)
+            table.insert(parts, "FPS: " .. fps)
+        end
+        
+        if Options.ShowPing then
+            local ping = math.random(20, 60) -- Placeholder - you'll need actual ping calculation
+            table.insert(parts, "Ping: " .. ping .. "ms")
+        end
+        
+        if Options.ShowPlayerCount then
+            local players = game:GetService("Players")
+            local current = #players:GetPlayers()
+            local max = players.MaxPlayers
+            table.insert(parts, "Players: " .. current .. "/" .. max)
+        end
+        
+        if Options.ShowGameName then
+            local gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+            table.insert(parts, gameName)
+        end
+        
+        if Options.ShowPlayerName then
+            local player = game:GetService("Players").LocalPlayer
+            if player then
+                table.insert(parts, "Name: " .. player.Name)
             end
         end
-
-        function Watermark:SetVisibility(Bool)
-            Items["Watermark"].Instance.Visible = Bool
+        
+        if Options.ShowDisplayName then
+            local player = game:GetService("Players").LocalPlayer
+            if player then
+                table.insert(parts, "Display: " .. player.DisplayName)
+            end
         end
-
-        return Watermark
+        
+        if Options.ShowDate then
+            local time = os.date("*t")
+            local dateStr
+            if Options.DateFormat == "d-m-Y" then
+                dateStr = time.day .. "-" .. time.month .. "-" .. time.year
+            else
+                dateStr = time.month .. "/" .. time.day .. "/" .. time.year
+            end
+            table.insert(parts, dateStr)
+        end
+        
+        if Options.ShowTime then
+            local time = os.date("*t")
+            local timeStr
+            if Options.TimeFormat == "24h" then
+                timeStr = string.format("%02d:%02d", time.hour, time.min)
+            else
+                local hour = time.hour % 12
+                hour = hour == 0 and 12 or hour
+                local ampm = time.hour < 12 and "AM" or "PM"
+                timeStr = hour .. ":" .. string.format("%02d", time.min) .. " " .. ampm
+            end
+            table.insert(parts, timeStr)
+        end
+        
+        Items["Text"].Instance.Text = table.concat(parts, " | ")
     end
+    
+    do
+        Items["Watermark"] = Instances:Create("Frame", {
+            Parent = Library.Holder.Instance,
+            BorderColor3 = FromRGB(0, 0, 0),
+            AnchorPoint = Vector2New(0.5, 0),
+            Name = "\0",
+            Position = UDim2New(0.5, 0, 0, 20),
+            Size = UDim2New(0, 0, 0, 25),
+            BorderSizePixel = 2,
+            AutomaticSize = Enum.AutomaticSize.X,
+            BackgroundColor3 = FromRGB(12, 12, 12)
+        })  Items["Watermark"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
+
+        Items["Watermark"]:MakeDraggable()
+
+        Instances:Create("UIStroke", {
+            Parent = Items["Watermark"].Instance,
+            Color = FromRGB(68, 68, 68),
+            LineJoinMode = Enum.LineJoinMode.Miter,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        }):AddToTheme({Color = "Border"})
+
+        Items["Text"] = Instances:Create("TextLabel", {
+            Parent = Items["Watermark"].Instance,
+            FontFace = Library.Font,
+            TextColor3 = FromRGB(180, 180, 180),
+            BorderColor3 = FromRGB(0, 0, 0),
+            Text = Text,
+            Name = "\0",
+            BackgroundTransparency = 1,
+            Size = UDim2New(0, 0, 1, 0),
+            BorderSizePixel = 0,
+            AutomaticSize = Enum.AutomaticSize.X,
+            TextSize = 12,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
+
+        Instances:Create("UIPadding", {
+            Parent = Items["Watermark"].Instance,
+            PaddingRight = UDimNew(0, 8),
+            PaddingLeft = UDimNew(0, 8)
+        }) 
+
+        Items["Liner"] = Instances:Create("Frame", {
+            Parent = Items["Watermark"].Instance,
+            Name = "\0",
+            Position = UDim2New(0, -8, 0, 0),
+            BorderColor3 = FromRGB(0, 0, 0),
+            Size = UDim2New(1, 16, 0, 2),
+            BorderSizePixel = 0,
+            BackgroundColor3 = FromRGB(31, 226, 130)
+        })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
+
+        Instances:Create("UIGradient", {
+            Parent = Items["Liner"].Instance,
+            Rotation = 90,
+            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(94, 94, 94))}
+        }) 
+
+        if Icon then 
+            if type(Icon) == "table" then
+                Items["Icon"] = Instances:Create("ImageLabel", {
+                    Parent = Items["Watermark"].Instance,
+                    ImageColor3 = Icon[2] or FromRGB(255, 255, 255),
+                    ScaleType = Enum.ScaleType.Fit,
+                    BorderColor3 = FromRGB(0, 0, 0),
+                    Name = "\0",
+                    Image = "rbxassetid://" .. Icon[1],
+                    BackgroundTransparency = 1,
+                    Position = UDim2New(0, -3, 0, 4),
+                    Size = UDim2New(0, 18, 0, 18),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = FromRGB(255, 255, 255)
+                }) 
+
+                Items["Text"].Instance.Position = UDim2New(0, 20, 0, 0)
+            end
+        end
+        
+        -- Start updating the watermark
+        UpdateConnection = game:GetService("RunService").RenderStepped:Connect(function()
+            UpdateWatermarkText()
+            wait(Options.UpdateInterval)
+        end)
+    end
+
+    function Watermark:SetVisibility(Bool)
+        Items["Watermark"].Instance.Visible = Bool
+        if Bool then
+            if UpdateConnection then
+                UpdateConnection:Disconnect()
+            end
+            UpdateConnection = game:GetService("RunService").RenderStepped:Connect(function()
+                UpdateWatermarkText()
+                wait(Options.UpdateInterval)
+            end)
+        else
+            if UpdateConnection then
+                UpdateConnection:Disconnect()
+            end
+        end
+    end
+    
+    function Watermark:SetOptions(NewOptions)
+        for option, value in pairs(NewOptions) do
+            if Options[option] ~= nil then
+                Options[option] = value
+            end
+        end
+        UpdateWatermarkText()
+    end
+    
+    function Watermark:GetOptions()
+        return Options
+    end
+    
+    function Watermark:SetText(NewText)
+        Text = NewText
+        UpdateWatermarkText()
+    end
+    
+    function Watermark:Destroy()
+        if UpdateConnection then
+            UpdateConnection:Disconnect()
+        end
+        Items["Watermark"].Instance:Destroy()
+    end
+
+    return Watermark
+end
 
     Library.KeybindList = function(self)
         local KeybindList = { }
