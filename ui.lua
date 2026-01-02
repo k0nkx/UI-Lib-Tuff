@@ -1060,12 +1060,13 @@ local Library do
         end
     end
 
-    Library.Watermark = function(self, Text, Icon)
+Library.Watermark = function(self, Text, Icon)
     local Watermark = { }
     local Items = { }
     local UpdateConnection = nil
     local LastPingUpdate = 0
     local CurrentPing = 0
+    local MainText = Text -- Store the main text in a variable
     
     -- FPS counter variables
     local FPS = 0
@@ -1115,7 +1116,7 @@ local Library do
     
     -- Function to update the watermark text
     local function UpdateWatermarkText()
-        local parts = {Text}
+        local parts = {MainText}
         
         if Options.ShowFPS then
             table.insert(parts, "FPS: " .. FPS)
@@ -1213,7 +1214,7 @@ local Library do
             FontFace = Library.Font,
             TextColor3 = FromRGB(180, 180, 180),
             BorderColor3 = FromRGB(0, 0, 0),
-            Text = Text,
+            Text = MainText,
             Name = "\0",
             BackgroundTransparency = 1,
             Size = UDim2New(0, 0, 1, 0),
@@ -1311,6 +1312,18 @@ local Library do
             copy[k] = v
         end
         return copy
+    end
+    
+    -- Add SetText method to fix the error
+    function Watermark:SetText(NewText)
+        MainText = NewText
+        UpdateWatermarkText()
+    end
+    
+    -- Also add SetMainText as an alias if needed
+    function Watermark:SetMainText(NewText)
+        MainText = NewText
+        UpdateWatermarkText()
     end
     
     function Watermark:Update()
