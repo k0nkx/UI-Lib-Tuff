@@ -1115,7 +1115,7 @@ local Library do
     
     -- Function to update the watermark text
     local function UpdateWatermarkText()
-        local parts = {Text}
+        local parts = {Text} -- Use the original Text from constructor
         
         if Options.ShowFPS then
             table.insert(parts, "FPS: " .. FPS)
