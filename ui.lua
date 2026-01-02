@@ -1063,10 +1063,26 @@ local Library do
     Library.Watermark = function(self, Text, Icon)
     local Watermark = { }
     local Items = { }
-    local EnabledOptions = {}
     local UpdateConnection = nil
     local LastPingUpdate = 0
     local CurrentPing = 0
+    
+    -- FPS counter variables
+    local FPS = 0
+    local Frames = 0
+    local LastFPSUpdate = os.clock()
+    local RunService = game:GetService("RunService")
+    
+    -- FPS counter connection
+    local FPSConnection = RunService.RenderStepped:Connect(function()
+        Frames += 1
+        local now = os.clock()
+        if now - LastFPSUpdate >= 1 then
+            FPS = Frames
+            Frames = 0
+            LastFPSUpdate = now
+        end
+    end)
     
     -- Default options table
     local Options = {
@@ -1097,38 +1113,12 @@ local Library do
         return 0
     end
     
-    -- Function to get actual FPS
-    local function GetFPS()
-        -- Method 1: Using workspace physics FPS
-        local fps1 = workspace:GetRealPhysicsFPS()
-        
-        -- Method 2: Using PerformanceStats
-        local stats = game:GetService("Stats")
-        if stats then
-            local perfStats = stats:FindFirstChild("PerformanceStats")
-            if perfStats then
-                local fpsStat = perfStats:FindFirstChild("FPS")
-                if fpsStat then
-                    return math.floor(fpsStat:GetValue())
-                end
-            end
-        end
-        
-        -- Fallback to workspace method
-        if fps1 then
-            return math.floor(fps1)
-        end
-        
-        return 60 -- Default fallback
-    end
-    
     -- Function to update the watermark text
     local function UpdateWatermarkText()
         local parts = {Text}
         
         if Options.ShowFPS then
-            local fps = GetFPS()
-            table.insert(parts, "FPS: " .. fps)
+            table.insert(parts, "FPS: " .. FPS)
         end
         
         -- Update ping less frequently to avoid flickering
@@ -1281,8 +1271,8 @@ local Library do
             LastPingUpdate = tick()
         end
         
-        -- Start updating the watermark
-        UpdateConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        -- Start updating the watermark text
+        UpdateConnection = RunService.Heartbeat:Connect(function()
             UpdateWatermarkText()
             wait(Options.UpdateInterval)
         end)
@@ -1294,7 +1284,7 @@ local Library do
             if UpdateConnection then
                 UpdateConnection:Disconnect()
             end
-            UpdateConnection = game:GetService("RunService").Heartbeat:Connect(function()
+            UpdateConnection = RunService.Heartbeat:Connect(function()
                 UpdateWatermarkText()
                 wait(Options.UpdateInterval)
             end)
@@ -1323,25 +1313,24 @@ local Library do
         return copy
     end
     
-    function Watermark:SetText(NewText)
-        Text = NewText
-        UpdateWatermarkText()
-    end
-    
-    function Watermark:SetMainText(NewText)
-        Text = NewText
-        UpdateWatermarkText()
-    end
-    
     function Watermark:Update()
         UpdateWatermarkText()
     end
     
     function Watermark:Destroy()
+        -- Clean up FPS counter
+        if FPSConnection then
+            FPSConnection:Disconnect()
+            FPSConnection = nil
+        end
+        
+        -- Clean up update connection
         if UpdateConnection then
             UpdateConnection:Disconnect()
             UpdateConnection = nil
         end
+        
+        -- Destroy the UI
         Items["Watermark"].Instance:Destroy()
     end
 
