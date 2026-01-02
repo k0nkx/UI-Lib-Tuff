@@ -1488,14 +1488,39 @@ end
     -- Notification management
     if not Library.Notifications then
         Library.Notifications = {}
+        Library.NotificationCount = 0
     end
     
-    -- Limit to 11 notifications max
-    if #Library.Notifications >= 11 then
-        -- Remove the oldest notification
+    -- Remove oldest notification if we're at max (11)
+    if Library.NotificationCount >= 11 then
         local oldest = table.remove(Library.Notifications, 1)
         if oldest and oldest.Instance then
-            oldest.Instance:Destroy()
+            Library.NotificationCount = Library.NotificationCount - 1
+            
+            -- Animate the closing (reverse width animation)
+            Library:Thread(function()
+                for Index, Value in oldest.Instance:GetDescendants() do
+                    if Value:IsA("UIStroke") then
+                        Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Transparency = 1}, true)
+                    elseif Value:IsA("TextLabel") then
+                        Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 1}, true)
+                    elseif Value:IsA("ImageLabel") then
+                        Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {ImageTransparency = 1}, true)
+                    elseif Value:IsA("Frame") then
+                        Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 1}, true)
+                    end
+                end
+                
+                task.wait(0.06)
+                
+                -- Width closing animation
+                oldest:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(0, 0, 0, 24)
+                })
+                
+                task.wait(0.2)
+                oldest:Clean()
+            end)
         end
     end
     
@@ -1503,17 +1528,12 @@ end
         Items["Notification"] = Instances:Create("Frame", {
             Parent = Library.NotifHolder.Instance,
             Name = "\0",
-            Size = UDim2New(0, 0, 0, 0), -- Start at 0 size
-            Position = UDim2New(0.5, 0, 0, 0),
-            AnchorPoint = Vector2.new(0.5, 0),
+            Size = UDim2New(0, 0, 0, 24), -- Start with 0 width
             BorderColor3 = FromRGB(10, 10, 10),
             BorderSizePixel = 2,
             AutomaticSize = Enum.AutomaticSize.XY,
             BackgroundColor3 = FromRGB(13, 13, 13)
         })  Items["Notification"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
-
-        -- Store reference for later cleanup
-        table.insert(Library.Notifications, Items["Notification"])
 
         Instances:Create("UIStroke", {
             Parent = Items["Notification"].Instance,
@@ -1550,7 +1570,7 @@ end
             Name = "\0",
             Position = UDim2New(0, -5, 0, -1),
             BorderColor3 = FromRGB(0, 0, 0),
-            Size = UDim2New(0, 0, 0, 2), -- Start at 0 width
+            Size = UDim2New(1, 11, 0, 2),
             BorderSizePixel = 0,
             BackgroundColor3 = Color
         })  
@@ -1583,10 +1603,9 @@ end
         end
     end
 
-    -- Set initial transparent state
+    -- Initial transparent state
     Items["Notification"].Instance.BackgroundTransparency = 1
     Items["Notification"].Instance.Size = UDim2New(0, 0, 0, 0)
-    
     for Index, Value in Items["Notification"].Instance:GetDescendants() do
         if Value:IsA("UIStroke") then 
             Value.Transparency = 1
@@ -1599,35 +1618,25 @@ end
         end
     end
 
+    -- Add to notifications list
+    table.insert(Library.Notifications, Items["Notification"])
+    Library.NotificationCount = Library.NotificationCount + 1
+
     Library:Thread(function()
-        -- Step 1: Expand from small square to rectangle (opening animation)
-        Items["Notification"]:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2New(0, 10, 0, 10) -- Small square
+        -- Width opening animation (starts small, widens fast)
+        Items["Notification"]:Tween(TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2New(0, Items["Title"].Instance.TextBounds.X + 20, 0, 24)
         })
         
-        task.wait(0.05)
-        
-        Items["Notification"]:Tween(TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-            Size = UDim2New(0, 0, 0, 24), -- Expand to proper height
+        -- Fade in after width animation starts
+        task.wait(0.03)
+        Items["Notification"]:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             BackgroundTransparency = 0
         })
         
-        task.wait(0.05)
-        
-        -- Expand the liner from left to right
-        if Icon and type(Icon) == "table" then
-            Items["Liner"]:Tween(TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-                Size = UDim2New(1, 13, 0, 2)
-            })
-        else
-            Items["Liner"]:Tween(TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-                Size = UDim2New(1, 11, 0, 2)
-            })
-        end
-
         task.wait(0.06)
 
-        -- Step 2: Fade in content
+        -- Fade in all elements
         for Index, Value in Items["Notification"].Instance:GetDescendants() do
             if Value:IsA("UIStroke") then
                 Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Transparency = 0}, true)
@@ -1635,14 +1644,22 @@ end
                 Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 0}, true)
             elseif Value:IsA("ImageLabel") then
                 Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {ImageTransparency = 0}, true)
-            elseif Value:IsA("Frame") and Value ~= Items["Liner"].Instance then
+            elseif Value:IsA("Frame") then
                 Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0}, true)
             end
         end
 
-        -- Wait for the duration
         task.delay(Duration + 0.1, function()
-            -- Step 3: Fade out content
+            -- Remove from notifications list
+            for i, notif in ipairs(Library.Notifications) do
+                if notif == Items["Notification"] then
+                    table.remove(Library.Notifications, i)
+                    Library.NotificationCount = Library.NotificationCount - 1
+                    break
+                end
+            end
+            
+            -- Fade out all elements
             for Index, Value in Items["Notification"].Instance:GetDescendants() do
                 if Value:IsA("UIStroke") then
                     Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Transparency = 1}, true)
@@ -1657,38 +1674,19 @@ end
 
             task.wait(0.06)
 
-            -- Step 4: Shrink liner from right to left
-            Items["Liner"]:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-                Size = UDim2New(0, 0, 0, 2)
-            })
-            
-            task.wait(0.05)
-            
-            -- Step 5: Shrink rectangle to small square (closing animation)
-            Items["Notification"]:Tween(TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-                Size = UDim2New(0, 10, 0, 10) -- Shrink to small square
-            })
-            
-            task.wait(0.05)
-            
-            -- Step 6: Shrink to nothing
+            -- Width closing animation (reverse of opening)
             Items["Notification"]:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = UDim2New(0, 0, 0, 0),
-                BackgroundTransparency = 1
+                Size = UDim2New(0, 0, 0, 24)
+            })
+            
+            task.wait(0.2)
+            Items["Notification"]:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                BackgroundTransparency = 1,
+                Size = UDim2New(0, 0, 0, 0)
             })
 
-            task.wait(0.5)
-            
-            -- Clean up
+            task.wait(0.3)
             Items["Notification"]:Clean()
-            
-            -- Remove from notifications table
-            for i, notif in ipairs(Library.Notifications) do
-                if notif == Items["Notification"] then
-                    table.remove(Library.Notifications, i)
-                    break
-                end
-            end
         end)
     end)
 end
