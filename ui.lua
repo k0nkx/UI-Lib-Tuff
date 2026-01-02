@@ -1065,6 +1065,8 @@ local Library do
     local Items = { }
     local EnabledOptions = {}
     local UpdateConnection = nil
+    local LastPingUpdate = 0
+    local CurrentPing = 0
     
     -- Default options table
     local Options = {
@@ -1076,10 +1078,24 @@ local Library do
         ShowGameName = true,
         ShowPlayerName = false,
         ShowDisplayName = false,
-        UpdateInterval = 0.5, -- Update every 0.5 seconds
+        UpdateInterval = 1, -- Update every 1 second
+        PingUpdateInterval = 5, -- Update ping every 5 seconds
         DateFormat = "d-m-Y", -- 1-2-2026
         TimeFormat = "24h" -- 24-hour format
     }
+    
+    -- Function to calculate ping (more stable)
+    local function CalculatePing()
+        local stats = game:GetService("Stats")
+        local network = stats.Network
+        if network then
+            local ping = network.ServerStatsItem["Data Ping"]
+            if ping then
+                return math.floor(ping:GetValue())
+            end
+        end
+        return 0
+    end
     
     -- Function to update the watermark text
     local function UpdateWatermarkText()
@@ -1090,16 +1106,22 @@ local Library do
             table.insert(parts, "FPS: " .. fps)
         end
         
+        -- Update ping less frequently to avoid flickering
+        local currentTime = tick()
+        if Options.ShowPing and (currentTime - LastPingUpdate) >= Options.PingUpdateInterval then
+            CurrentPing = CalculatePing()
+            LastPingUpdate = currentTime
+        end
+        
         if Options.ShowPing then
-            local ping = math.random(20, 60) -- Placeholder - you'll need actual ping calculation
-            table.insert(parts, "Ping: " .. ping .. "ms")
+            table.insert(parts, CurrentPing .. "ms")
         end
         
         if Options.ShowPlayerCount then
             local players = game:GetService("Players")
             local current = #players:GetPlayers()
             local max = players.MaxPlayers
-            table.insert(parts, "Players: " .. current .. "/" .. max)
+            table.insert(parts, "Plr: " .. current .. "/" .. max)
         end
         
         if Options.ShowGameName then
@@ -1110,14 +1132,14 @@ local Library do
         if Options.ShowPlayerName then
             local player = game:GetService("Players").LocalPlayer
             if player then
-                table.insert(parts, "Name: " .. player.Name)
+                table.insert(parts, player.Name)
             end
         end
         
         if Options.ShowDisplayName then
             local player = game:GetService("Players").LocalPlayer
             if player then
-                table.insert(parts, "Display: " .. player.DisplayName)
+                table.insert(parts, player.DisplayName)
             end
         end
         
@@ -1228,6 +1250,12 @@ local Library do
             end
         end
         
+        -- Initialize ping
+        if Options.ShowPing then
+            CurrentPing = CalculatePing()
+            LastPingUpdate = tick()
+        end
+        
         -- Start updating the watermark
         UpdateConnection = game:GetService("RunService").RenderStepped:Connect(function()
             UpdateWatermarkText()
@@ -1248,6 +1276,7 @@ local Library do
         else
             if UpdateConnection then
                 UpdateConnection:Disconnect()
+                UpdateConnection = nil
             end
         end
     end
@@ -1262,7 +1291,11 @@ local Library do
     end
     
     function Watermark:GetOptions()
-        return Options
+        local copy = {}
+        for k, v in pairs(Options) do
+            copy[k] = v
+        end
+        return copy
     end
     
     function Watermark:SetText(NewText)
@@ -1270,9 +1303,19 @@ local Library do
         UpdateWatermarkText()
     end
     
+    function Watermark:SetMainText(NewText)
+        Text = NewText
+        UpdateWatermarkText()
+    end
+    
+    function Watermark:Update()
+        UpdateWatermarkText()
+    end
+    
     function Watermark:Destroy()
         if UpdateConnection then
             UpdateConnection:Disconnect()
+            UpdateConnection = nil
         end
         Items["Watermark"].Instance:Destroy()
     end
