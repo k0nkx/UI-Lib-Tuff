@@ -1497,64 +1497,37 @@ end
         return KeybindList
     end
 
-    Library.Notification = function(self, Text, Duration, Color, Icon)
+    Library.Notifications = {} -- Table to track active notifications
+Library.MaxNotifications = 11 -- Maximum notifications at once
+
+Library.Notification = function(self, Text, Duration, Color, Icon)
+    -- If we have max notifications, remove the oldest one
+    if #Library.Notifications >= Library.MaxNotifications then
+        local oldest = table.remove(Library.Notifications, 1)
+        if oldest and oldest.Instance and oldest.Instance.Parent then
+            oldest:Destroy()
+        end
+    end
+    
+    local Notification = { }
     local Items = { }
     
-    -- Notification queue management
-    if not Library.Notifications then
-        Library.Notifications = {
-            Queue = {},
-            Active = {},
-            MaxNotifications = 11
-        }
-        
-        -- Create notification holder if it doesn't exist
-        if not Library.NotifHolder then
-            Library.NotifHolder = Instances:Create("Frame", {
-                Parent = game:GetService("CoreGui") or game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"),
-                Name = "NotificationHolder",
-                BackgroundTransparency = 1,
-                Position = UDim2.new(1, -20, 0.5, 0),
-                Size = UDim2.new(0, 300, 1, -40),
-                AnchorPoint = Vector2.new(1, 0.5)
-            })
-        end
-    end
-    
-    -- Function to manage notification queue
-    local function ManageQueue()
-        local notifications = Library.Notifications
-        
-        -- Remove oldest notification if we're at max
-        if #notifications.Active >= notifications.MaxNotifications then
-            local oldest = notifications.Active[1]
-            if oldest and oldest.Destroy then
-                oldest:Destroy()
-                table.remove(notifications.Active, 1)
-            end
-        end
-        
-        -- Position all active notifications
-        for i, notification in ipairs(notifications.Active) do
-            if notification and notification.Instance then
-                notification:Position(i)
-            end
-        end
-    end
-    
-    -- Create the notification
     do
         Items["Notification"] = Instances:Create("Frame", {
             Parent = Library.NotifHolder.Instance,
             Name = "\0",
-            Size = UDim2New(0, 0, 0, 0),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            AnchorPoint = Vector2.new(0.5, 0.5),
+            Size = UDim2New(0, 0, 0, 0), -- Start at size 0
             BorderColor3 = FromRGB(10, 10, 10),
             BorderSizePixel = 2,
             AutomaticSize = Enum.AutomaticSize.XY,
-            BackgroundColor3 = FromRGB(13, 13, 13)
-        })  Items["Notification"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
+            BackgroundColor3 = FromRGB(13, 13, 13),
+            AnchorPoint = Vector2New(0.5, 0.5),
+            Position = UDim2New(0.5, 0, 0.5, 0) -- Start at center
+        })  
+        Items["Notification"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
+
+        -- Add to notifications list
+        table.insert(Library.Notifications, Items["Notification"])
 
         Instances:Create("UIStroke", {
             Parent = Items["Notification"].Instance,
@@ -1567,8 +1540,7 @@ end
             Parent = Items["Notification"].Instance,
             PaddingTop = UDimNew(0, 1),
             PaddingRight = UDimNew(0, 6),
-            PaddingLeft = UDimNew(0, 5),
-            PaddingBottom = UDimNew(0, 4)
+            PaddingLeft = UDimNew(0, 5)
         }) 
 
         Items["Title"] = Instances:Create("TextLabel", {
@@ -1594,7 +1566,7 @@ end
             BorderColor3 = FromRGB(0, 0, 0),
             Size = UDim2New(1, 11, 0, 2),
             BorderSizePixel = 0,
-            BackgroundColor3 = Color or FromRGB(31, 226, 130)
+            BackgroundColor3 = Color
         })  
 
         Instances:Create("UIGradient", {
@@ -1608,7 +1580,7 @@ end
         if type(Icon) == "table" then
             Items["Icon"] = Instances:Create("ImageLabel", {
                 Parent = Items["Notification"].Instance,
-                ImageColor3 = Icon[2] or FromRGB(255, 255, 255),
+                ImageColor3 = Icon[2],
                 ScaleType = Enum.ScaleType.Fit,
                 BorderColor3 = FromRGB(0, 0, 0),
                 Name = "\0",
@@ -1625,120 +1597,109 @@ end
         end
     end
 
-    -- Position function for the notification
-    function Items:Position(index)
-        local totalHeight = 0
-        for i = 1, index - 1 do
-            local notif = Library.Notifications.Active[i]
-            if notif and notif.Instance then
-                totalHeight = totalHeight + notif.Instance.AbsoluteSize.Y + 5 -- 5 pixel spacing
-            end
-        end
-        
-        self.Notification:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Position = UDim2.new(0, 0, 0, totalHeight)
-        })
-    end
-
-    -- Destroy function for the notification
-    function Items:Destroy()
-        if self.Destroyed then return end
-        self.Destroyed = true
-        
-        -- Remove from active notifications
-        for i, notif in ipairs(Library.Notifications.Active) do
-            if notif == self then
-                table.remove(Library.Notifications.Active, i)
+    -- Function to remove this notification from the list
+    local function RemoveFromList()
+        for i, notif in ipairs(Library.Notifications) do
+            if notif == Items["Notification"] then
+                table.remove(Library.Notifications, i)
                 break
             end
         end
-        
-        -- Fade out and destroy
-        Library:Thread(function()
-            -- Scale down animation
-            self.Notification:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
-                Size = UDim2New(0, 0, 0, 0),
-                Position = UDim2.new(0.5, 0, 0.5, 0)
-            })
-            
-            -- Fade out all elements
-            for _, Value in self.Notification.Instance:GetDescendants() do
-                if Value:IsA("UIStroke") then
-                    Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Transparency = 1}, true)
-                elseif Value:IsA("TextLabel") then
-                    Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 1}, true)
-                elseif Value:IsA("ImageLabel") then
-                    Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 1}, true)
-                elseif Value:IsA("Frame") then
-                    Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}, true)
-                end
-            end
-            
-            task.wait(0.3)
-            self.Notification:Clean()
-            
-            -- Reposition remaining notifications
-            ManageQueue()
-        end)
+    end
+    
+    -- Function to destroy notification
+    function Items["Notification"]:Destroy()
+        RemoveFromList()
+        self.Instance:Destroy()
     end
 
-    -- Add to active notifications
-    table.insert(Library.Notifications.Active, Items)
-    ManageQueue()
-
-    -- Animation sequence
-    Library:Thread(function()
-        -- Initial state: small and centered
-        Items["Notification"].Instance.BackgroundTransparency = 1
-        Items["Notification"].Instance.Size = UDim2New(0, 0, 0, 0)
-        
-        -- Make all elements transparent initially
-        for _, Value in Items["Notification"].Instance:GetDescendants() do
-            if Value:IsA("UIStroke") then 
-                Value.Transparency = 1
-            elseif Value:IsA("TextLabel") then 
-                Value.TextTransparency = 1
-            elseif Value:IsA("ImageLabel") then 
-                Value.ImageTransparency = 1
-            elseif Value:IsA("Frame") then 
-                Value.BackgroundTransparency = 1
-            end
+    -- Start everything invisible and tiny
+    Items["Notification"].Instance.BackgroundTransparency = 1
+    Items["Notification"].Instance.Size = UDim2New(0, 0, 0, 0)
+    for _, Value in pairs(Items["Notification"].Instance:GetDescendants()) do
+        if Value:IsA("UIStroke") then 
+            Value.Transparency = 1
+        elseif Value:IsA("TextLabel") then 
+            Value.TextTransparency = 1
+        elseif Value:IsA("ImageLabel") then 
+            Value.ImageTransparency = 1
+        elseif Value:IsA("Frame") then 
+            Value.BackgroundTransparency = 1
         end
+    end
 
-        -- Step 1: Scale up from center (pop effect)
+    Library:Thread(function()
+        -- Animation 1: Pop out from center
         Items["Notification"]:Tween(TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2New(0, Items["Title"].Instance.TextBounds.X + (Icon and 20 or 15), 0, 24),
-            BackgroundTransparency = 0
+            BackgroundTransparency = 0,
+            Size = UDim2New(0, 0, 0, 24),
+            AnchorPoint = Vector2New(0, 0),
+            Position = UDim2New(0, 0, 0, 0)
         })
         
-        task.wait(0.1)
-        
-        -- Step 2: Fade in all elements
-        for _, Value in Items["Notification"].Instance:GetDescendants() do
+        task.wait(0.06)
+
+        -- Animation 2: Fade in all elements with slight stagger
+        local children = Items["Notification"].Instance:GetDescendants()
+        for i, Value in pairs(children) do
             if Value:IsA("UIStroke") then
-                Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Transparency = 0}, true)
+                task.wait(0.02)
+                Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Transparency = 0}, true)
             elseif Value:IsA("TextLabel") then
-                Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 0}, true)
+                task.wait(0.04)
+                Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = 0}, true)
             elseif Value:IsA("ImageLabel") then
-                Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {ImageTransparency = 0}, true)
-            elseif Value:IsA("Frame") then
-                Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0}, true)
+                task.wait(0.03)
+                Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {ImageTransparency = 0}, true)
+            elseif Value:IsA("Frame") and Value ~= Items["Notification"].Instance then
+                task.wait(0.02)
+                Tween:Create(Value, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0}, true)
             end
         end
-        
-        task.wait(0.1)
-        
-        -- Step 3: Position the notification in the queue
-        Items:Position(#Library.Notifications.Active)
-        
-        -- Wait for the duration
-        task.wait(Duration or 3)
-        
-        -- Destroy the notification after duration
-        Items:Destroy()
-    end)
 
-    return Items
+        -- Wait for the specified duration
+        task.delay(Duration, function()
+            -- Animation 3: Fade out all elements
+            local children = Items["Notification"].Instance:GetDescendants()
+            for i, Value in pairs(children) do
+                if Value:IsA("UIStroke") then
+                    Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Transparency = 1}, true)
+                elseif Value:IsA("TextLabel") then
+                    Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {TextTransparency = 1}, true)
+                elseif Value:IsA("ImageLabel") then
+                    Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {ImageTransparency = 1}, true)
+                elseif Value:IsA("Frame") and Value ~= Items["Notification"].Instance then
+                    Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 1}, true)
+                end
+            end
+
+            task.wait(0.1)
+
+            -- Animation 4: Shrink back to center
+            Items["Notification"]:Tween(TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                BackgroundTransparency = 1,
+                Size = UDim2New(0, 0, 0, 0),
+                AnchorPoint = Vector2New(0.5, 0.5),
+                Position = UDim2New(0.5, 0, 0.5, 0)
+            })
+
+            task.wait(0.3)
+            Items["Notification"]:Destroy()
+        end)
+    end)
+    
+    return Notification
+end
+
+-- Optional: Add a function to clear all notifications
+Library.ClearNotifications = function(self)
+    for i = #Library.Notifications, 1, -1 do
+        local notif = Library.Notifications[i]
+        if notif and notif.Instance and notif.Instance.Parent then
+            notif:Destroy()
+        end
+    end
+    Library.Notifications = {}
 end
 
     local Components = { } do
