@@ -1513,12 +1513,17 @@ end
                 
                 task.wait(0.06)
                 
-                -- Width closing animation
-                oldest:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                -- Width closing animation - shrink to small
+                oldest:Tween(TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(0, 10, 0, 24)
+                })
+                
+                task.wait(0.1)
+                oldest:Tween(TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
                     Size = UDim2.new(0, 0, 0, 24)
                 })
                 
-                task.wait(0.2)
+                task.wait(0.15)
                 oldest:Clean()
             end)
         end
@@ -1603,9 +1608,15 @@ end
         end
     end
 
-    -- Initial transparent state
+    -- Calculate final width based on text
+    local finalWidth = Items["Title"].Instance.TextBounds.X + 20
+    if Icon then
+        finalWidth = finalWidth + 15
+    end
+
+    -- Initial transparent state (very small width)
     Items["Notification"].Instance.BackgroundTransparency = 1
-    Items["Notification"].Instance.Size = UDim2New(0, 0, 0, 0)
+    Items["Notification"].Instance.Size = UDim2New(0, 10, 0, 24)
     for Index, Value in Items["Notification"].Instance:GetDescendants() do
         if Value:IsA("UIStroke") then 
             Value.Transparency = 1
@@ -1623,29 +1634,28 @@ end
     Library.NotificationCount = Library.NotificationCount + 1
 
     Library:Thread(function()
-        -- Width opening animation (starts small, widens fast)
-        Items["Notification"]:Tween(TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            Size = UDim2New(0, Items["Title"].Instance.TextBounds.X + 20, 0, 24)
+        -- Phase 1: Expand quickly to full width with smooth easing
+        Items["Notification"]:Tween(TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2New(0, finalWidth, 0, 24)
         })
         
-        -- Fade in after width animation starts
-        task.wait(0.03)
-        Items["Notification"]:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        -- Phase 2: Fade in background as width expands
+        task.wait(0.05)
+        Items["Notification"]:Tween(TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             BackgroundTransparency = 0
         })
         
-        task.wait(0.06)
-
-        -- Fade in all elements
+        -- Phase 3: Fade in all elements with slight delay
+        task.wait(0.1)
         for Index, Value in Items["Notification"].Instance:GetDescendants() do
             if Value:IsA("UIStroke") then
-                Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Transparency = 0}, true)
+                Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Transparency = 0}, true)
             elseif Value:IsA("TextLabel") then
-                Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 0}, true)
+                Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 0}, true)
             elseif Value:IsA("ImageLabel") then
-                Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {ImageTransparency = 0}, true)
+                Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {ImageTransparency = 0}, true)
             elseif Value:IsA("Frame") then
-                Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0}, true)
+                Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 0}, true)
             end
         end
 
@@ -1659,29 +1669,38 @@ end
                 end
             end
             
-            -- Fade out all elements
+            -- Phase 1: Fade out all elements
             for Index, Value in Items["Notification"].Instance:GetDescendants() do
                 if Value:IsA("UIStroke") then
-                    Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Transparency = 1}, true)
+                    Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Transparency = 1}, true)
                 elseif Value:IsA("TextLabel") then
-                    Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 1}, true)
+                    Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {TextTransparency = 1}, true)
                 elseif Value:IsA("ImageLabel") then
-                    Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {ImageTransparency = 1}, true)
+                    Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {ImageTransparency = 1}, true)
                 elseif Value:IsA("Frame") then
-                    Tween:Create(Value, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 1}, true)
+                    Tween:Create(Value, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = 1}, true)
                 end
             end
 
             task.wait(0.06)
 
-            -- Width closing animation (reverse of opening)
+            -- Phase 2: Background fade out
             Items["Notification"]:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                Size = UDim2New(0, 0, 0, 24)
+                BackgroundTransparency = 1
             })
             
+            -- Phase 3: Width closing animation - two-stage shrink
+            Items["Notification"]:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size = UDim2New(0, 10, 0, 24)
+            })
+            
+            task.wait(0.1)
+            Items["Notification"]:Tween(TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                Size = UDim2New(0, 0, 0, 24)
+            })
+
             task.wait(0.2)
-            Items["Notification"]:Tween(TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-                BackgroundTransparency = 1,
+            Items["Notification"]:Tween(TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                 Size = UDim2New(0, 0, 0, 0)
             })
 
