@@ -1080,8 +1080,8 @@ local Library do
         ShowDisplayName = false,
         UpdateInterval = 1, -- Update every 1 second
         PingUpdateInterval = 5, -- Update ping every 5 seconds
-        DateFormat = "d-m-Y", -- 1-2-2026
-        TimeFormat = "24h" -- 24-hour format
+        DateFormat = "m-d-Y", -- Month-Day-Year (12-25-2026)
+        TimeFormat = "12h" -- 12-hour format
     }
     
     -- Function to calculate ping (more stable)
@@ -1097,12 +1097,37 @@ local Library do
         return 0
     end
     
+    -- Function to get actual FPS
+    local function GetFPS()
+        -- Method 1: Using workspace physics FPS
+        local fps1 = workspace:GetRealPhysicsFPS()
+        
+        -- Method 2: Using PerformanceStats
+        local stats = game:GetService("Stats")
+        if stats then
+            local perfStats = stats:FindFirstChild("PerformanceStats")
+            if perfStats then
+                local fpsStat = perfStats:FindFirstChild("FPS")
+                if fpsStat then
+                    return math.floor(fpsStat:GetValue())
+                end
+            end
+        end
+        
+        -- Fallback to workspace method
+        if fps1 then
+            return math.floor(fps1)
+        end
+        
+        return 60 -- Default fallback
+    end
+    
     -- Function to update the watermark text
     local function UpdateWatermarkText()
         local parts = {Text}
         
         if Options.ShowFPS then
-            local fps = math.floor(workspace:GetRealPhysicsFPS() or 60)
+            local fps = GetFPS()
             table.insert(parts, "FPS: " .. fps)
         end
         
@@ -1146,8 +1171,8 @@ local Library do
         if Options.ShowDate then
             local time = os.date("*t")
             local dateStr
-            if Options.DateFormat == "d-m-Y" then
-                dateStr = time.day .. "-" .. time.month .. "-" .. time.year
+            if Options.DateFormat == "m-d-Y" then
+                dateStr = time.month .. "-" .. time.day .. "-" .. time.year
             else
                 dateStr = time.month .. "/" .. time.day .. "/" .. time.year
             end
@@ -1157,13 +1182,13 @@ local Library do
         if Options.ShowTime then
             local time = os.date("*t")
             local timeStr
-            if Options.TimeFormat == "24h" then
-                timeStr = string.format("%02d:%02d", time.hour, time.min)
-            else
+            if Options.TimeFormat == "12h" then
                 local hour = time.hour % 12
                 hour = hour == 0 and 12 or hour
                 local ampm = time.hour < 12 and "AM" or "PM"
                 timeStr = hour .. ":" .. string.format("%02d", time.min) .. " " .. ampm
+            else
+                timeStr = string.format("%02d:%02d", time.hour, time.min)
             end
             table.insert(parts, timeStr)
         end
@@ -1257,7 +1282,7 @@ local Library do
         end
         
         -- Start updating the watermark
-        UpdateConnection = game:GetService("RunService").RenderStepped:Connect(function()
+        UpdateConnection = game:GetService("RunService").Heartbeat:Connect(function()
             UpdateWatermarkText()
             wait(Options.UpdateInterval)
         end)
@@ -1269,7 +1294,7 @@ local Library do
             if UpdateConnection then
                 UpdateConnection:Disconnect()
             end
-            UpdateConnection = game:GetService("RunService").RenderStepped:Connect(function()
+            UpdateConnection = game:GetService("RunService").Heartbeat:Connect(function()
                 UpdateWatermarkText()
                 wait(Options.UpdateInterval)
             end)
@@ -1322,7 +1347,6 @@ local Library do
 
     return Watermark
 end
-
     Library.KeybindList = function(self)
         local KeybindList = { }
         Library.KeyList = KeybindList
