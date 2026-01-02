@@ -1449,7 +1449,7 @@ end
                 FontFace = Library.Font,
                 TextColor3 = FromRGB(31, 226, 130),
                 BorderColor3 = FromRGB(0, 0, 0),
-                Text = "( " .. Mode .. " ) " .. Name .. " - " .. Key .. " ",
+                Text = "( " .. Mode .. " ) " .. Name .. " - [ " .. Key .. " ] ",
                 Name = "\0",
                 Size = UDim2New(0, 0, 0, 17),
                 BackgroundTransparency = 1,
