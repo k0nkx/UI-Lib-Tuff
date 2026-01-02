@@ -1061,138 +1061,94 @@ local Library do
     end
 
     Library.Watermark = function(self, Text, Icon)
-    local Watermark = { }
+        local Watermark = { }
 
-    local Items = { } do
-        Items["Watermark"] = Instances:Create("Frame", {
-            Parent = Library.Holder.Instance,
-            BorderColor3 = FromRGB(0, 0, 0),
-            AnchorPoint = Vector2New(0.5, 0),
-            Name = "\0",
-            Position = UDim2New(0.5, 0, 0, 20),
-            Size = UDim2New(0, 0, 0, 25),
-            BorderSizePixel = 2,
-            AutomaticSize = Enum.AutomaticSize.X,
-            BackgroundColor3 = FromRGB(12, 12, 12)
-        })  Items["Watermark"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
+        local Items = { } do
+            Items["Watermark"] = Instances:Create("Frame", {
+                Parent = Library.Holder.Instance,
+                BorderColor3 = FromRGB(0, 0, 0),
+                AnchorPoint = Vector2New(0.5, 0),
+                Name = "\0",
+                Position = UDim2New(0.5, 0, 0, 20),
+                Size = UDim2New(0, 0, 0, 25),
+                BorderSizePixel = 2,
+                AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundColor3 = FromRGB(12, 12, 12)
+            })  Items["Watermark"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
 
-        Items["Watermark"]:MakeDraggable()
+            Items["Watermark"]:MakeDraggable()
 
-        Instances:Create("UIStroke", {
-            Parent = Items["Watermark"].Instance,
-            Color = FromRGB(68, 68, 68),
-            LineJoinMode = Enum.LineJoinMode.Miter,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        }):AddToTheme({Color = "Border"})
+            Instances:Create("UIStroke", {
+                Parent = Items["Watermark"].Instance,
+                Color = FromRGB(68, 68, 68),
+                LineJoinMode = Enum.LineJoinMode.Miter,
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            }):AddToTheme({Color = "Border"})
 
-        Items["Text"] = Instances:Create("TextLabel", {
-            Parent = Items["Watermark"].Instance,
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(180, 180, 180),
-            BorderColor3 = FromRGB(0, 0, 0),
-            Text = Text,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(0, 0, 1, 0),
-            BorderSizePixel = 0,
-            AutomaticSize = Enum.AutomaticSize.X,
-            TextSize = 12,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
+            Items["Text"] = Instances:Create("TextLabel", {
+                Parent = Items["Watermark"].Instance,
+                FontFace = Library.Font,
+                TextColor3 = FromRGB(180, 180, 180),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Text = Text,
+                Name = "\0",
+                BackgroundTransparency = 1,
+                Size = UDim2New(0, 0, 1, 0),
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.X,
+                TextSize = 12,
+                BackgroundColor3 = FromRGB(255, 255, 255)
+            })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
-        Instances:Create("UIPadding", {
-            Parent = Items["Watermark"].Instance,
-            PaddingRight = UDimNew(0, 8),
-            PaddingLeft = UDimNew(0, 8)
-        }) 
+            Instances:Create("UIPadding", {
+                Parent = Items["Watermark"].Instance,
+                PaddingRight = UDimNew(0, 8),
+                PaddingLeft = UDimNew(0, 8)
+            }) 
 
-        Items["Liner"] = Instances:Create("Frame", {
-            Parent = Items["Watermark"].Instance,
-            Name = "\0",
-            Position = UDim2New(0, -8, 0, 0),
-            BorderColor3 = FromRGB(0, 0, 0),
-            Size = UDim2New(1, 16, 0, 2),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(31, 226, 130)
-        })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
+            Items["Liner"] = Instances:Create("Frame", {
+                Parent = Items["Watermark"].Instance,
+                Name = "\0",
+                Position = UDim2New(0, -8, 0, 0),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Size = UDim2New(1, 16, 0, 2),
+                BorderSizePixel = 0,
+                BackgroundColor3 = FromRGB(31, 226, 130)
+            })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
 
-        Instances:Create("UIGradient", {
-            Parent = Items["Liner"].Instance,
-            Rotation = 90,
-            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(94, 94, 94))}
-        }) 
+            Instances:Create("UIGradient", {
+                Parent = Items["Liner"].Instance,
+                Rotation = 90,
+                Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(94, 94, 94))}
+            }) 
 
-        if Icon then 
-            if type(Icon) == "table" then
-                Items["Icon"] = Instances:Create("ImageLabel", {
-                    Parent = Items["Watermark"].Instance,
-                    ImageColor3 = Icon[2] or FromRGB(255, 255, 255),
-                    ScaleType = Enum.ScaleType.Fit,
-                    BorderColor3 = FromRGB(0, 0, 0),
-                    Name = "\0",
-                    Image = "rbxassetid://" .. Icon[1],
-                    BackgroundTransparency = 1,
-                    Position = UDim2New(0, -3, 0, 4),
-                    Size = UDim2New(0, 18, 0, 18),
-                    BorderSizePixel = 0,
-                    BackgroundColor3 = FromRGB(255, 255, 255)
-                }) 
+            if Icon then 
+                if type(Icon) == "table" then
+                    Items["Icon"] = Instances:Create("ImageLabel", {
+                        Parent = Items["Watermark"].Instance,
+                        ImageColor3 = Icon[2] or FromRGB(255, 255, 255),
+                        ScaleType = Enum.ScaleType.Fit,
+                        BorderColor3 = FromRGB(0, 0, 0),
+                        Name = "\0",
+                        Image = "rbxassetid://" .. Icon[1],
+                        BackgroundTransparency = 1,
+                        Position = UDim2New(0, -3, 0, 4),
+                        Size = UDim2New(0, 18, 0, 18),
+                        BorderSizePixel = 0,
+                        BackgroundColor3 = FromRGB(255, 255, 255)
+                    }) 
 
-                Items["Text"].Instance.Position = UDim2New(0, 20, 0, 0)
-            end
-        end
-    end
-
-    -- METHODS:
-    
-    function Watermark:SetVisibility(Bool)
-        Items["Watermark"].Instance.Visible = Bool
-    end
-    
-    function Watermark:SetText(NewText)
-        Items["Text"].Instance.Text = NewText
-    end
-    
-    function Watermark:GetText()
-        return Items["Text"].Instance.Text
-    end
-    
-    function Watermark:Destroy()
-        Items["Watermark"].Instance:Destroy()
-        for k, v in pairs(Watermark) do
-            Watermark[k] = nil
-        end
-    end
-    
-    function Watermark:SetIcon(IconData)
-        if type(IconData) == "table" and IconData[1] then
-            if Items["Icon"] then
-                Items["Icon"].Instance.Image = "rbxassetid://" .. IconData[1]
-                if IconData[2] then
-                    Items["Icon"].Instance.ImageColor3 = IconData[2]
+                    Items["Text"].Instance.Position = UDim2New(0, 20, 0, 0)
                 end
-            else
-                -- Create icon if it doesn't exist
-                Items["Icon"] = Instances:Create("ImageLabel", {
-                    Parent = Items["Watermark"].Instance,
-                    ImageColor3 = IconData[2] or FromRGB(255, 255, 255),
-                    ScaleType = Enum.ScaleType.Fit,
-                    BorderColor3 = FromRGB(0, 0, 0),
-                    Name = "\0",
-                    Image = "rbxassetid://" .. IconData[1],
-                    BackgroundTransparency = 1,
-                    Position = UDim2New(0, -3, 0, 4),
-                    Size = UDim2New(0, 18, 0, 18),
-                    BorderSizePixel = 0,
-                    BackgroundColor3 = FromRGB(255, 255, 255)
-                }) 
-                Items["Text"].Instance.Position = UDim2New(0, 20, 0, 0)
             end
         end
-    end
 
-    return Watermark
-end
+        function Watermark:SetVisibility(Bool)
+            Items["Watermark"].Instance.Visible = Bool
+        end
+
+        return Watermark
+    end
 
     Library.KeybindList = function(self)
         local KeybindList = { }
@@ -1319,7 +1275,7 @@ end
             })  NewKey:AddToTheme({TextColor3 = "Text"})
 
             function NewKey:Set(Mode, Name, Key)
-                NewKey.Instance.Text = "(" .. Mode .. ")  " .. Name .. "   |   [ " .. Key .. " ]"
+                NewKey.Instance.Text = "( " .. Mode .. " ) " .. Name .. " - " .. Key .. " "
             end
 
             function NewKey:SetStatus(Bool)
