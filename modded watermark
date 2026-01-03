@@ -1391,7 +1391,7 @@ end
                 FontFace = Library.Font,
                 TextColor3 = FromRGB(180, 180, 180),
                 BorderColor3 = FromRGB(0, 0, 0),
-                Text = "Keybinds",
+                Text = "Keybind List",
                 Name = "\0",
                 Size = UDim2New(0, 0, 0, 20),
                 Position = UDim2New(0, -2, 0, -4),
