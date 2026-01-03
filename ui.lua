@@ -1061,281 +1061,95 @@ local Library do
     end
 
     Library.Watermark = function(self, Text, Icon)
-    local Watermark = { }
-    local Items = { }
-    local UpdateConnection = nil
-    local LastPingUpdate = 0
-    local CurrentPing = 0
-    
-    -- FPS counter variables
-    local FPS = 0
-    local Frames = 0
-    local LastFPSUpdate = os.clock()
-    local RunService = game:GetService("RunService")
-    
-    -- FPS counter connection
-    local FPSConnection = RunService.RenderStepped:Connect(function()
-        Frames += 1
-        local now = os.clock()
-        if now - LastFPSUpdate >= 1 then
-            FPS = Frames
-            Frames = 0
-            LastFPSUpdate = now
-        end
-    end)
-    
-    -- Default options table
-    local Options = {
-        ShowPing = true,
-        ShowPlayerCount = true,
-        ShowDate = true,
-        ShowTime = true,
-        ShowFPS = true,
-        ShowGameName = true,
-        ShowPlayerName = false,
-        ShowDisplayName = false,
-        UpdateInterval = 1, -- Update every 1 second
-        PingUpdateInterval = 5, -- Update ping every 5 seconds
-        DateFormat = "m-d-Y", -- Month-Day-Year (12-25-2026)
-        TimeFormat = "12h" -- 12-hour format
-    }
-    
-    -- Function to calculate ping (more stable)
-    local function CalculatePing()
-        local stats = game:GetService("Stats")
-        local network = stats.Network
-        if network then
-            local ping = network.ServerStatsItem["Data Ping"]
-            if ping then
-                return math.floor(ping:GetValue())
+        local Watermark = { }
+
+        local Items = { } do
+            Items["Watermark"] = Instances:Create("Frame", {
+                Parent = Library.Holder.Instance,
+                BorderColor3 = FromRGB(0, 0, 0),
+                AnchorPoint = Vector2New(0.5, 0),
+                Name = "\0",
+                Position = UDim2New(0.5, 0, 0, 20),
+                Size = UDim2New(0, 0, 0, 25),
+                BorderSizePixel = 2,
+                AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundColor3 = FromRGB(12, 12, 12)
+            })  Items["Watermark"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
+
+            Items["Watermark"]:MakeDraggable()
+
+            Instances:Create("UIStroke", {
+                Parent = Items["Watermark"].Instance,
+                Color = FromRGB(68, 68, 68),
+                LineJoinMode = Enum.LineJoinMode.Miter,
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            }):AddToTheme({Color = "Border"})
+
+            Items["Text"] = Instances:Create("TextLabel", {
+                Parent = Items["Watermark"].Instance,
+                FontFace = Library.Font,
+                TextColor3 = FromRGB(180, 180, 180),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Text = Text,
+                Name = "\0",
+                BackgroundTransparency = 1,
+                Size = UDim2New(0, 0, 1, 0),
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.X,
+                TextSize = 12,
+                BackgroundColor3 = FromRGB(255, 255, 255)
+            })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
+
+            Instances:Create("UIPadding", {
+                Parent = Items["Watermark"].Instance,
+                PaddingRight = UDimNew(0, 8),
+                PaddingLeft = UDimNew(0, 8)
+            }) 
+
+            Items["Liner"] = Instances:Create("Frame", {
+                Parent = Items["Watermark"].Instance,
+                Name = "\0",
+                Position = UDim2New(0, -8, 0, 0),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Size = UDim2New(1, 16, 0, 2),
+                BorderSizePixel = 0,
+                BackgroundColor3 = FromRGB(31, 226, 130)
+            })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
+
+            Instances:Create("UIGradient", {
+                Parent = Items["Liner"].Instance,
+                Rotation = 90,
+                Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(94, 94, 94))}
+            }) 
+
+            if Icon then 
+                if type(Icon) == "table" then
+                    Items["Icon"] = Instances:Create("ImageLabel", {
+                        Parent = Items["Watermark"].Instance,
+                        ImageColor3 = Icon[2] or FromRGB(255, 255, 255),
+                        ScaleType = Enum.ScaleType.Fit,
+                        BorderColor3 = FromRGB(0, 0, 0),
+                        Name = "\0",
+                        Image = "rbxassetid://" .. Icon[1],
+                        BackgroundTransparency = 1,
+                        Position = UDim2New(0, -3, 0, 4),
+                        Size = UDim2New(0, 18, 0, 18),
+                        BorderSizePixel = 0,
+                        BackgroundColor3 = FromRGB(255, 255, 255)
+                    }) 
+
+                    Items["Text"].Instance.Position = UDim2New(0, 20, 0, 0)
+                end
             end
         end
-        return 0
-    end
-    
-    -- Function to update the watermark text
-    local function UpdateWatermarkText()
-        local parts = {Text} -- Use the original Text from constructor
-        
-        if Options.ShowFPS then
-            table.insert(parts, "FPS: " .. FPS)
-        end
-        
-        -- Update ping less frequently to avoid flickering
-        local currentTime = tick()
-        if Options.ShowPing and (currentTime - LastPingUpdate) >= Options.PingUpdateInterval then
-            CurrentPing = CalculatePing()
-            LastPingUpdate = currentTime
-        end
-        
-        if Options.ShowPing then
-            table.insert(parts, CurrentPing .. "ms")
-        end
-        
-        if Options.ShowPlayerCount then
-            local players = game:GetService("Players")
-            local current = #players:GetPlayers()
-            local max = players.MaxPlayers
-            table.insert(parts, "Plr: " .. current .. "/" .. max)
-        end
-        
-        if Options.ShowGameName then
-            local gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
-            table.insert(parts, gameName)
-        end
-        
-        if Options.ShowPlayerName then
-            local player = game:GetService("Players").LocalPlayer
-            if player then
-                table.insert(parts, player.Name)
-            end
-        end
-        
-        if Options.ShowDisplayName then
-            local player = game:GetService("Players").LocalPlayer
-            if player then
-                table.insert(parts, player.DisplayName)
-            end
-        end
-        
-        if Options.ShowDate then
-            local time = os.date("*t")
-            local dateStr
-            if Options.DateFormat == "m-d-Y" then
-                dateStr = time.month .. "-" .. time.day .. "-" .. time.year
-            else
-                dateStr = time.month .. "/" .. time.day .. "/" .. time.year
-            end
-            table.insert(parts, dateStr)
-        end
-        
-        if Options.ShowTime then
-            local time = os.date("*t")
-            local timeStr
-            if Options.TimeFormat == "12h" then
-                local hour = time.hour % 12
-                hour = hour == 0 and 12 or hour
-                local ampm = time.hour < 12 and "AM" or "PM"
-                timeStr = hour .. ":" .. string.format("%02d", time.min) .. " " .. ampm
-            else
-                timeStr = string.format("%02d:%02d", time.hour, time.min)
-            end
-            table.insert(parts, timeStr)
-        end
-        
-        Items["Text"].Instance.Text = table.concat(parts, " | ")
-    end
-    
-    do
-        Items["Watermark"] = Instances:Create("Frame", {
-            Parent = Library.Holder.Instance,
-            BorderColor3 = FromRGB(0, 0, 0),
-            AnchorPoint = Vector2New(0.5, 0),
-            Name = "\0",
-            Position = UDim2New(0.5, 0, 0, 20),
-            Size = UDim2New(0, 0, 0, 25),
-            BorderSizePixel = 2,
-            AutomaticSize = Enum.AutomaticSize.X,
-            BackgroundColor3 = FromRGB(12, 12, 12)
-        })  Items["Watermark"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
 
-        Items["Watermark"]:MakeDraggable()
-
-        Instances:Create("UIStroke", {
-            Parent = Items["Watermark"].Instance,
-            Color = FromRGB(68, 68, 68),
-            LineJoinMode = Enum.LineJoinMode.Miter,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        }):AddToTheme({Color = "Border"})
-
-        Items["Text"] = Instances:Create("TextLabel", {
-            Parent = Items["Watermark"].Instance,
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(180, 180, 180),
-            BorderColor3 = FromRGB(0, 0, 0),
-            Text = Text,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(0, 0, 1, 0),
-            BorderSizePixel = 0,
-            AutomaticSize = Enum.AutomaticSize.X,
-            TextSize = 12,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
-
-        Instances:Create("UIPadding", {
-            Parent = Items["Watermark"].Instance,
-            PaddingRight = UDimNew(0, 8),
-            PaddingLeft = UDimNew(0, 8)
-        }) 
-
-        Items["Liner"] = Instances:Create("Frame", {
-            Parent = Items["Watermark"].Instance,
-            Name = "\0",
-            Position = UDim2New(0, -8, 0, 0),
-            BorderColor3 = FromRGB(0, 0, 0),
-            Size = UDim2New(1, 16, 0, 2),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(31, 226, 130)
-        })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
-
-        Instances:Create("UIGradient", {
-            Parent = Items["Liner"].Instance,
-            Rotation = 90,
-            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(94, 94, 94))}
-        }) 
-
-        if Icon then 
-            if type(Icon) == "table" then
-                Items["Icon"] = Instances:Create("ImageLabel", {
-                    Parent = Items["Watermark"].Instance,
-                    ImageColor3 = Icon[2] or FromRGB(255, 255, 255),
-                    ScaleType = Enum.ScaleType.Fit,
-                    BorderColor3 = FromRGB(0, 0, 0),
-                    Name = "\0",
-                    Image = "rbxassetid://" .. Icon[1],
-                    BackgroundTransparency = 1,
-                    Position = UDim2New(0, -3, 0, 4),
-                    Size = UDim2New(0, 18, 0, 18),
-                    BorderSizePixel = 0,
-                    BackgroundColor3 = FromRGB(255, 255, 255)
-                }) 
-
-                Items["Text"].Instance.Position = UDim2New(0, 20, 0, 0)
-            end
+        function Watermark:SetVisibility(Bool)
+            Items["Watermark"].Instance.Visible = Bool
         end
-        
-        -- Initialize ping
-        if Options.ShowPing then
-            CurrentPing = CalculatePing()
-            LastPingUpdate = tick()
-        end
-        
-        -- Start updating the watermark text
-        UpdateConnection = RunService.Heartbeat:Connect(function()
-            UpdateWatermarkText()
-            wait(Options.UpdateInterval)
-        end)
+
+        return Watermark
     end
 
-    function Watermark:SetVisibility(Bool)
-        Items["Watermark"].Instance.Visible = Bool
-        if Bool then
-            if UpdateConnection then
-                UpdateConnection:Disconnect()
-            end
-            UpdateConnection = RunService.Heartbeat:Connect(function()
-                UpdateWatermarkText()
-                wait(Options.UpdateInterval)
-            end)
-        else
-            if UpdateConnection then
-                UpdateConnection:Disconnect()
-                UpdateConnection = nil
-            end
-        end
-    end
-    
-    function Watermark:SetOptions(NewOptions)
-        for option, value in pairs(NewOptions) do
-            if Options[option] ~= nil then
-                Options[option] = value
-            end
-        end
-        UpdateWatermarkText()
-    end
-    
-    function Watermark:GetOptions()
-        local copy = {}
-        for k, v in pairs(Options) do
-            copy[k] = v
-        end
-        return copy
-    end
-    
-    function Watermark:Update()
-        UpdateWatermarkText()
-    end
-    
-    function Watermark:Destroy()
-        -- Clean up FPS counter
-        if FPSConnection then
-            FPSConnection:Disconnect()
-            FPSConnection = nil
-        end
-        
-        -- Clean up update connection
-        if UpdateConnection then
-            UpdateConnection:Disconnect()
-            UpdateConnection = nil
-        end
-        
-        -- Destroy the UI
-        Items["Watermark"].Instance:Destroy()
-    end
-
-    return Watermark
-end
     Library.KeybindList = function(self)
         local KeybindList = { }
         Library.KeyList = KeybindList
@@ -1391,7 +1205,7 @@ end
                 FontFace = Library.Font,
                 TextColor3 = FromRGB(180, 180, 180),
                 BorderColor3 = FromRGB(0, 0, 0),
-                Text = "Keybind List",
+                Text = "Keybinds",
                 Name = "\0",
                 Size = UDim2New(0, 0, 0, 20),
                 Position = UDim2New(0, -2, 0, -4),
@@ -1449,7 +1263,7 @@ end
                 FontFace = Library.Font,
                 TextColor3 = FromRGB(31, 226, 130),
                 BorderColor3 = FromRGB(0, 0, 0),
-                Text = "( " .. Mode .. " ) " .. Name .. "   |   [ " .. Key .. " ] ",
+                Text = "( " .. Mode .. " ) " .. Name .. " - " .. Key .. " ",
                 Name = "\0",
                 Size = UDim2New(0, 0, 0, 17),
                 BackgroundTransparency = 1,
@@ -1461,7 +1275,7 @@ end
             })  NewKey:AddToTheme({TextColor3 = "Text"})
 
             function NewKey:Set(Mode, Name, Key)
-                NewKey.Instance.Text = "( " .. Mode .. " ) " .. Name .. "   |   [ " .. Key .. " ] "
+                NewKey.Instance.Text = "( " .. Mode .. " ) " .. Name .. " - " .. Key .. " "
             end
 
             function NewKey:SetStatus(Bool)
