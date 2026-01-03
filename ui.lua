@@ -1453,7 +1453,7 @@ end
                 Name = "\0",
                 Size = UDim2New(0, 0, 0, 17),
                 BackgroundTransparency = 1,
-                TextXAlignment = Enum.TextXAlignment.Center,
+                TextXAlignment = Enum.TextXAlignment.Left,
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
                 TextSize = 12,
