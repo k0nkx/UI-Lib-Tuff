@@ -1386,20 +1386,28 @@ end
             PaddingLeft = UDimNew(0, 7)
         }) 
 
-        -- Centered Title
-        Items["Title"] = Instances:Create("TextLabel", {
+        -- Create a container for the title to center it properly
+        Items["TitleContainer"] = Instances:Create("Frame", {
             Parent = Items["Inline"].Instance,
+            Name = "\0",
+            Size = UDim2New(1, 0, 0, 20),
+            Position = UDim2New(0, 0, 0, -4),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        })
+
+        Items["Title"] = Instances:Create("TextLabel", {
+            Parent = Items["TitleContainer"].Instance,
             FontFace = Library.Font,
             TextColor3 = FromRGB(180, 180, 180),
             BorderColor3 = FromRGB(0, 0, 0),
             Text = "Keybinds",
             Name = "\0",
-            Size = UDim2New(1, 0, 0, 20), -- full width
-            Position = UDim2New(0, 0, 0, -4), -- aligned top
+            Size = UDim2New(1, 0, 1, 0),
             BackgroundTransparency = 1,
-            TextXAlignment = Enum.TextXAlignment.Center, -- center text
+            TextXAlignment = Enum.TextXAlignment.Center,
             BorderSizePixel = 0,
-            AutomaticSize = Enum.AutomaticSize.Y, -- only auto-height
             TextSize = 12,
             BackgroundColor3 = FromRGB(255, 255, 255)
         })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
