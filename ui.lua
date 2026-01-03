@@ -1396,7 +1396,7 @@ end
                 Size = UDim2New(0, 0, 0, 20),
                 Position = UDim2New(0, -2, 0, -4),
                 BackgroundTransparency = 1,
-                TextXAlignment = Enum.TextXAlignment.Left,
+                TextXAlignment = Enum.TextXAlignment.Middle,
                 BorderSizePixel = 0,
                 AutomaticSize = Enum.AutomaticSize.X,
                 TextSize = 12,
