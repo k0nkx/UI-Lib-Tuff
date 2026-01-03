@@ -1337,349 +1337,152 @@ local Library do
     return Watermark
 end
     Library.KeybindList = function(self)
-    local KeybindList = { }
-    Library.KeyList = KeybindList
-    local activeKeybinds = {}
-    local keybindCallbacks = {}
-    local inputConnection = nil
+        local KeybindList = { }
+        Library.KeyList = KeybindList
 
-    local Items = { } do 
-        -- Main Container
-        Items["MainFrame"] = Instances:Create("Frame", {
-            Parent = Library.Holder.Instance,
-            AnchorPoint = Vector2New(0.05, 0.5),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Position = UDim2New(0.05, 0, 0.5, 0),
-            Size = UDim2New(0, 200, 0, 65),
-            Name = "\0"
-        })
-        
-        Items["MainFrame"]:MakeDraggable()
-        
-        Instances:Create("UIListLayout", {
-            Parent = Items["MainFrame"].Instance,
-            Padding = UDimNew(0, 4),
-            SortOrder = Enum.SortOrder.LayoutOrder
-        })
-        
-        Instances:Create("UIPadding", {
-            Parent = Items["MainFrame"].Instance,
-            PaddingBottom = UDimNew(0, 4)
-        })
-        
-        -- Outer Frame Layer 1
-        Items["Frame1"] = Instances:Create("Frame", {
-            Parent = Items["MainFrame"].Instance,
-            BackgroundColor3 = FromRGB(45, 45, 45),
-            BorderSizePixel = 0,
-            Size = UDim2New(1, -1, 1, 0),
-            Name = "\0"
-        }) Items["Frame1"]:AddToTheme({BackgroundColor3 = "Window Background"})
-        
-        -- Outer Frame Layer 2
-        Items["Frame2"] = Instances:Create("Frame", {
-            Parent = Items["Frame1"].Instance,
-            BackgroundColor3 = FromRGB(10, 10, 10),
-            BorderSizePixel = 0,
-            Position = UDim2New(0, 1, 0, 1),
-            Size = UDim2New(1, -2, 1, -2),
-            Name = "\0"
-        }) Items["Frame2"]:AddToTheme({BackgroundColor3 = "Outline"})
-        
-        -- Main Frame Layer
-        Items["Frame3"] = Instances:Create("Frame", {
-            Parent = Items["Frame2"].Instance,
-            BackgroundColor3 = FromRGB(255, 255, 255),
-            BorderSizePixel = 0,
-            Position = UDim2New(0, 1, 0, 1),
-            Size = UDim2New(1, -2, 1, -2),
-            Name = "\0"
-        }) Items["Frame3"]:AddToTheme({BackgroundColor3 = "Inline"})
-        
-        -- Gradient for main frame
-        Instances:Create("UIGradient", {
-            Parent = Items["Frame3"].Instance,
-            Color = RGBSequence{
-                RGBSequenceKeypoint(0, FromRGB(30, 30, 30)),
-                RGBSequenceKeypoint(1, FromRGB(20, 20, 20))
-            }
-        })
-        
-        -- Top Bar (Green accent)
-        Items["TopBar"] = Instances:Create("Frame", {
-            Parent = Items["Frame3"].Instance,
-            BackgroundColor3 = FromRGB(31, 226, 130),
-            BorderSizePixel = 0,
-            Size = UDim2New(1, 0, 0, 2),
-            Name = "\0"
-        }) Items["TopBar"]:AddToTheme({BackgroundColor3 = "Accent"})
-        
-        -- Header
-        Items["Header"] = Instances:Create("Frame", {
-            Parent = Items["Frame3"].Instance,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Position = UDim2New(0, 0, 0, 2),
-            Size = UDim2New(1, 0, 0, 20),
-            Name = "\0"
-        })
-        
-        Items["Title"] = Instances:Create("TextLabel", {
-            Parent = Items["Header"].Instance,
-            FontFace = Library.Font,
-            Text = "Keybinds",
-            TextColor3 = FromRGB(180, 180, 180),
-            TextSize = 12,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2New(1, 0, 1, 0),
-            Name = "\0"
-        }) Items["Title"]:AddToTheme({TextColor3 = "Text"})
-        
-        Instances:Create("UIPadding", {
-            Parent = Items["Title"].Instance,
-            PaddingLeft = UDimNew(0, 5)
-        })
-        
-        Instances:Create("UIStroke", {
-            Parent = Items["Title"].Instance,
-            LineJoinMode = Enum.LineJoinMode.Miter,
-            Color = FromRGB(68, 68, 68)
-        }):AddToTheme({Color = "Border"})
-        
-        -- Content Area
-        Items["ContentHolder"] = Instances:Create("Frame", {
-            Parent = Items["Frame3"].Instance,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Position = UDim2New(0, 1, 0, 25),
-            Size = UDim2New(1, -2, 1, -24),
-            Name = "\0"
-        })
-        
-        Instances:Create("UIPadding", {
-            Parent = Items["ContentHolder"].Instance,
-            PaddingBottom = UDimNew(0, 2),
-            PaddingLeft = UDimNew(0, 3),
-            PaddingRight = UDimNew(0, 3),
-            PaddingTop = UDimNew(0, -1)
-        })
-        
-        Items["KeybindsContainer"] = Instances:Create("Frame", {
-            Parent = Items["ContentHolder"].Instance,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Size = UDim2New(1, 0, 1, 0),
-            Name = "\0"
-        })
-        
-        Items["LayoutContainer"] = Instances:Create("Frame", {
-            Parent = Items["KeybindsContainer"].Instance,
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Position = UDim2New(-0.013, 0, 0.029, 0),
-            Size = UDim2New(1, 0, 1, 0),
-            Name = "\0"
-        })
-        
-        Instances:Create("UIListLayout", {
-            Parent = Items["LayoutContainer"].Instance,
-            Padding = UDimNew(0, 2),
-            SortOrder = Enum.SortOrder.LayoutOrder
-        })
-    end
+        local Items = { } do 
+            Items["KeybindListOutline"] = Instances:Create("Frame", {
+                Parent = Library.Holder.Instance,
+                BorderColor3 = FromRGB(0, 0, 0),
+                AnchorPoint = Vector2New(0, 0.5),
+                Name = "\0",
+                Position = UDim2New(0, 20, 0.5, 0),
+                Size = UDim2New(0, 70, 0, 0),
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.XY,
+                BackgroundColor3 = FromRGB(43, 43, 43)
+            })  Items["KeybindListOutline"]:AddToTheme({BackgroundColor3 = "Window Background", BorderColor3 = "Outline"})
 
-    -- Function to update the display
-    local function updateKeybindDisplay()
-        -- Clear existing labels
-        for _, child in pairs(Items["LayoutContainer"].Instance:GetChildren()) do
-            if child:IsA("TextLabel") and child.Name == "\0" then
-                child:Destroy()
-            end
+            Items["KeybindListOutline"]:MakeDraggable()
+
+            Instances:Create("UIStroke", {
+                Parent = Items["KeybindListOutline"].Instance,
+                Color = FromRGB(68, 68, 68),
+                LineJoinMode = Enum.LineJoinMode.Miter,
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            }):AddToTheme({Color = "Border"})
+
+            Items["Inline"] = Instances:Create("Frame", {
+                Parent = Items["KeybindListOutline"].Instance,
+                Name = "\0",
+                Position = UDim2New(0, 5, 0, 5),
+                BorderColor3 = FromRGB(68, 68, 68),
+                Size = UDim2New(1, -10, 1, -10),
+                BorderSizePixel = 2,
+                BackgroundColor3 = FromRGB(12, 12, 12)
+            })  Items["Inline"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Border"})
+
+            Instances:Create("UIStroke", {
+                Parent = Items["Inline"].Instance,
+                ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                LineJoinMode = Enum.LineJoinMode.Miter
+            }):AddToTheme({Color = "Outline"})
+
+            Instances:Create("UIPadding", {
+                Parent = Items["Inline"].Instance,
+                PaddingTop = UDimNew(0, 7),
+                PaddingBottom = UDimNew(0, 7),
+                PaddingRight = UDimNew(0, 8),
+                PaddingLeft = UDimNew(0, 7)
+            }) 
+
+            Items["Title"] = Instances:Create("TextLabel", {
+                Parent = Items["Inline"].Instance,
+                FontFace = Library.Font,
+                TextColor3 = FromRGB(180, 180, 180),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Text = "Keybinds",
+                Name = "\0",
+                Size = UDim2New(0, 0, 0, 20),
+                Position = UDim2New(0, -2, 0, -4),
+                BackgroundTransparency = 1,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.X,
+                TextSize = 12,
+                BackgroundColor3 = FromRGB(255, 255, 255)
+            })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
+
+            Items["Content"] = Instances:Create("Frame", {
+                Parent = Items["Inline"].Instance,
+                Name = "\0",
+                BackgroundTransparency = 1,
+                Position = UDim2New(0, 4, 0, 21),
+                BorderColor3 = FromRGB(0, 0, 0),
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.XY,
+                BackgroundColor3 = FromRGB(255, 255, 255)
+            }) 
+
+            Instances:Create("UIListLayout", {
+                Parent = Items["Content"].Instance,
+                Padding = UDimNew(0, 2),
+                SortOrder = Enum.SortOrder.LayoutOrder
+            }) 
+            
+            Instances:Create("UIPadding", {
+                Parent = Items["Content"].Instance,
+                PaddingBottom = UDimNew(0, 7),
+                PaddingRight = UDimNew(0, 5)
+            }) 
+
+            Items["Liner"] = Instances:Create("Frame", {
+                Parent = Items["KeybindListOutline"].Instance,
+                Name = "\0",
+                Position = UDim2New(0, 5, 0, 5),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Size = UDim2New(1, -10, 0, 2),
+                BorderSizePixel = 0,
+                BackgroundColor3 = FromRGB(31, 226, 130)
+            })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
+
+            Instances:Create("UIGradient", {
+                Parent = Items["Liner"].Instance,
+                Rotation = 90,
+                Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(125, 125, 125))}
+            }) 
         end
-        
-        local count = 0
-        
-        -- Create new labels for each keybind
-        for name, data in pairs(activeKeybinds) do
-            if data and data.Key and data.Name then
-                count = count + 1
-                
-                local keybindLabel = Instances:Create("TextLabel", {
-                    Parent = Items["LayoutContainer"].Instance,
-                    Size = UDim2New(1, 0, 0, 14),
-                    BackgroundTransparency = 1,
-                    TextColor3 = FromRGB(180, 180, 180),
-                    FontFace = Library.Font,
-                    TextSize = 12,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    Name = "\0"
-                })
-                
-                local keyText = tostring(data.Key):gsub("Enum.KeyCode.", "")
-                local modeText = data.Mode or "Toggle"
-                local statusText = data.Active and " [ON]" or " [OFF]"
-                
-                keybindLabel.Instance.Text = data.Name .. ": " .. keyText .. statusText
-                
-                -- Set color based on active status
-                if data.Active then
-                    keybindLabel.Instance.TextColor3 = Library.Theme.Accent or FromRGB(31, 226, 130)
+
+        function KeybindList:Add(Mode, Name, Key)
+            local NewKey = Instances:Create("TextLabel", {
+                Parent = Items["Content"].Instance,
+                FontFace = Library.Font,
+                TextColor3 = FromRGB(31, 226, 130),
+                BorderColor3 = FromRGB(0, 0, 0),
+                Text = "( " .. Mode .. " ) " .. Name .. " - " .. Key .. " ",
+                Name = "\0",
+                Size = UDim2New(0, 0, 0, 17),
+                BackgroundTransparency = 1,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                BorderSizePixel = 0,
+                AutomaticSize = Enum.AutomaticSize.X,
+                TextSize = 12,
+                BackgroundColor3 = FromRGB(255, 255, 255)
+            })  NewKey:AddToTheme({TextColor3 = "Text"})
+
+            function NewKey:Set(Mode, Name, Key)
+                NewKey.Instance.Text = "( " .. Mode .. " ) " .. Name .. " - " .. Key .. " "
+            end
+
+            function NewKey:SetStatus(Bool)
+                if Bool then 
+                    NewKey:ChangeItemTheme({TextColor3 = "Accent"})
+                    NewKey:Tween(nil, {TextColor3 = Library.Theme.Accent})
                 else
-                    keybindLabel:AddToTheme({TextColor3 = "Text"})
+                    NewKey:ChangeItemTheme({TextColor3 = "Text"})
+                    NewKey:Tween(nil, {TextColor3 = Library.Theme.Text})
                 end
-                
-                Instances:Create("UIPadding", {
-                    Parent = keybindLabel.Instance,
-                    PaddingLeft = UDimNew(0, 2)
-                })
-                
-                Instances:Create("UIStroke", {
-                    Parent = keybindLabel.Instance,
-                    LineJoinMode = Enum.LineJoinMode.Miter,
-                    Color = FromRGB(68, 68, 68)
-                }):AddToTheme({Color = "Border"})
-                
-                data.GUI = keybindLabel
             end
+
+            return NewKey
         end
-        
-        -- Adjust frame height based on number of keybinds
-        local newHeight
-        if count <= 3 then
-            newHeight = 37 + (count * 15)
-        elseif count <= 5 then
-            newHeight = 40 + (count * 15)
-        elseif count <= 8 then
-            newHeight = 43 + (count * 15)
-        elseif count <= 10 then
-            newHeight = 45 + (count * 15)
-        else
-            newHeight = 50 + (count * 15)
+
+        function KeybindList:SetVisibility(Bool)
+            Items["KeybindListOutline"].Instance.Visible = Bool
         end
-        
-        Items["MainFrame"].Instance.Size = UDim2New(0, 200, 0, newHeight)
+
+        return KeybindList
     end
-
-    -- Connect to Heartbeat to update display
-    local heartbeatConnection
-    heartbeatConnection = game:GetService("RunService").Heartbeat:Connect(function()
-        updateKeybindDisplay()
-    end)
-
-    function KeybindList:Add(Mode, Name, Key, Callback)
-        if activeKeybinds[Name] then
-            warn("Keybind '" .. Name .. "' already exists!")
-            return nil
-        end
-        
-        activeKeybinds[Name] = {
-            Mode = Mode,
-            Name = Name,
-            Key = Key,
-            Callback = Callback,
-            Active = false
-        }
-        
-        -- Connect input event if this is the first keybind
-        if not inputConnection and next(activeKeybinds) then
-            inputConnection = game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-                if gameProcessed then return end
-                
-                for bindName, data in pairs(activeKeybinds) do
-                    if input.KeyCode == data.Key then
-                        if data.Mode == "Toggle" then
-                            data.Active = not data.Active
-                        elseif data.Mode == "Hold" then
-                            data.Active = true
-                        end
-                        
-                        if data.Callback then
-                            data.Callback(data.Active)
-                        end
-                    end
-                end
-            end)
-            
-            -- Handle key release for Hold mode
-            game:GetService("UserInputService").InputEnded:Connect(function(input)
-                for _, data in pairs(activeKeybinds) do
-                    if input.KeyCode == data.Key and data.Mode == "Hold" then
-                        data.Active = false
-                        if data.Callback then
-                            data.Callback(false)
-                        end
-                    end
-                end
-            end)
-        end
-        
-        updateKeybindDisplay()
-        return Name
-    end
-
-    function KeybindList:Remove(Name)
-        if activeKeybinds[Name] then
-            if activeKeybinds[Name].GUI then
-                activeKeybinds[Name].GUI:Destroy()
-            end
-            
-            activeKeybinds[Name] = nil
-            
-            -- Disconnect input event if no keybinds left
-            if inputConnection and not next(activeKeybinds) then
-                inputConnection:Disconnect()
-                inputConnection = nil
-            end
-            
-            return true
-        end
-        return false
-    end
-
-    function KeybindList:Update(Name, Mode, NewKey)
-        if activeKeybinds[Name] then
-            activeKeybinds[Name].Mode = Mode
-            activeKeybinds[Name].Key = NewKey
-            updateKeybindDisplay()
-            return true
-        end
-        return false
-    end
-
-    function KeybindList:SetStatus(Name, Bool)
-        if activeKeybinds[Name] then
-            activeKeybinds[Name].Active = Bool
-            return true
-        end
-        return false
-    end
-
-    function KeybindList:GetKeybinds()
-        return activeKeybinds
-    end
-
-    function KeybindList:SetVisibility(Bool)
-        Items["MainFrame"].Instance.Visible = Bool
-    end
-
-    function KeybindList:Cleanup()
-        if heartbeatConnection then
-            heartbeatConnection:Disconnect()
-            heartbeatConnection = nil
-        end
-        
-        if inputConnection then
-            inputConnection:Disconnect()
-            inputConnection = nil
-        end
-        
-        Items["MainFrame"].Instance:Destroy()
-    end
-
-    return KeybindList
-end
 
     Library.Notification = function(self, Text, Duration, Color, Icon)
     -- Create notification list if it doesn't exist
