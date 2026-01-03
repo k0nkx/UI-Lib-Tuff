@@ -1394,7 +1394,7 @@ end
                 Text = "Keybind List 🤤",
                 Name = "\0",
                 Size = UDim2New(0, 0, 0, 20),
-                Position = UDim2New(0, -2, 0, -4),
+                Position = UDim2New(0, -2, 0, -2),
                 BackgroundTransparency = 1,
                 TextXAlignment = Enum.TextXAlignment.Center,
                 BorderSizePixel = 0,
