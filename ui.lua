@@ -1248,7 +1248,11 @@ local Library do
             end
         end
         
-        Items["Text"].Instance.Text = table.concat(parts, " | ") .. " | " .. table.concat(displayItems, " | ")
+        if #displayItems > 0 then
+            Items["Text"].Instance.Text = Text .. " | " .. table.concat(displayItems, " | ")
+        else
+            Items["Text"].Instance.Text = Text
+        end
     end
     
     do
