@@ -1,0 +1,43 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+for _, gui in pairs(player.PlayerGui:GetChildren()) do
+    if gui.Name == "CustomCursorGui" then
+        gui:Destroy()
+    end
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CustomCursorGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local customCursor = Instance.new("ImageLabel")
+customCursor.Name = "\0"
+customCursor.BorderColor3 = Color3.fromRGB(0, 0, 0)
+customCursor.Image = "rbxassetid://76631660114196"
+customCursor.BackgroundTransparency = 1
+customCursor.Size = UDim2.new(0, 19, 0, 19)
+customCursor.BorderSizePixel = 0
+customCursor.ZIndex = 9999
+customCursor.AnchorPoint = Vector2.new(0.5, 0.5)
+customCursor.ImageColor3 = Color3.fromRGB(255, 230, 240) -- very light pink
+customCursor.Parent = screenGui
+
+local offset = Vector2.new(5, -51)
+
+UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+UserInputService.MouseIconEnabled = false
+
+RunService.RenderStepped:Connect(function()
+    local MouseLocation = UserInputService:GetMouseLocation()
+    customCursor.Position = UDim2.new(
+        0,
+        MouseLocation.X + offset.X,
+        0,
+        MouseLocation.Y + offset.Y
+    )
+end)
