@@ -1066,28 +1066,17 @@ local Library do
     local UpdateConnection = nil
     local LastPingUpdate = 0
     local CurrentPing = 0
-    local SessionStartTime = os.clock()
+    local SessionStart = os.time()
     
+    -- FPS counter variables
     local FPS = 0
     local Frames = 0
     local LastFPSUpdate = os.clock()
     local RunService = game:GetService("RunService")
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
-    local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     
-    local ExecutorName = "Unknown"
-    local getexecutorname = function() return identifyexecutor and identifyexecutor() end
-    
-    pcall(function()
-        local executor = getexecutorname()
-        if type(executor) == "string" then
-            ExecutorName = executor
-        elseif type(executor) == "table" and executor.Name then
-            ExecutorName = executor.Name
-        end
-    end)
-    
+    -- FPS counter connection
     local FPSConnection = RunService.RenderStepped:Connect(function()
         Frames += 1
         local now = os.clock()
@@ -1098,6 +1087,12 @@ local Library do
         end
     end)
     
+    -- Function to get executor name
+    local getexecutorname = function()
+        return identifyexecutor and identifyexecutor() or "Unknown"
+    end
+    
+    -- Default options table
     local Options = {
         ShowPing = true,
         ShowPlayerCount = true,
@@ -1111,14 +1106,13 @@ local Library do
         ShowSessionTime = true,
         ShowHealth = true,
         ShowVelocity = true,
-        UpdateInterval = 1,
-        PingUpdateInterval = 5,
-        DateFormat = "m-d-Y",
-        TimeFormat = "12h",
-        SessionTimeFormat = "h:m:s",
-        DisplayOrder = {"Executor", "Session", "FPS", "Ping", "Players", "Health", "Velocity", "Game", "PlayerName", "DisplayName", "Date", "Time"}
+        UpdateInterval = 0.1, -- Update more frequently for real-time info
+        PingUpdateInterval = 5, -- Update ping every 5 seconds
+        DateFormat = "m-d-Y", -- Month-Day-Year (12-25-2026)
+        TimeFormat = "12h" -- 12-hour format
     }
     
+    -- Function to calculate ping (more stable)
     local function CalculatePing()
         local stats = game:GetService("Stats")
         local network = stats.Network
@@ -1131,128 +1125,138 @@ local Library do
         return 0
     end
     
-    local function FormatSessionTime(seconds)
-        if Options.SessionTimeFormat == "h:m:s" then
-            local hours = math.floor(seconds / 3600)
-            local minutes = math.floor((seconds % 3600) / 60)
-            local secs = math.floor(seconds % 60)
-            
-            if hours > 0 then
-                return string.format("%dh %02dm %02ds", hours, minutes, secs)
-            elseif minutes > 0 then
-                return string.format("%dm %02ds", minutes, secs)
-            else
-                return string.format("%ds", secs)
-            end
+    -- Function to format session time
+    local function GetSessionTime()
+        local elapsed = os.time() - SessionStart
+        local hours = math.floor(elapsed / 3600)
+        local minutes = math.floor((elapsed % 3600) / 60)
+        local seconds = elapsed % 60
+        
+        if hours > 0 then
+            return string.format("%d:%02d:%02d", hours, minutes, seconds)
         else
-            local hours = math.floor(seconds / 3600)
-            local minutes = math.floor((seconds % 3600) / 60)
-            local secs = math.floor(seconds % 60)
-            return string.format("%02d:%02d:%02d", hours, minutes, secs)
+            return string.format("%02d:%02d", minutes, seconds)
         end
     end
     
-    local function GetHealthPercentage()
-        if not Character then return 0 end
-        local humanoid = Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            return math.floor(humanoid.Health)
+    -- Function to get health percentage
+    local function GetHealth()
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                return math.floor(humanoid.Health)
+            end
         end
         return 0
     end
     
+    -- Function to get velocity/walkspeed
     local function GetVelocity()
-        if not Character then return 0 end
-        local humanoid = Character:FindFirstChildOfClass("Humanoid")
-        local rootPart = Character:FindFirstChild("HumanoidRootPart")
-        
-        if humanoid and rootPart then
-            local velocity = rootPart.Velocity
-            local speed = math.sqrt(velocity.X^2 + velocity.Y^2 + velocity.Z^2)
-            return math.floor(speed)
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            
+            if rootPart then
+                -- Get actual velocity
+                local velocity = rootPart.Velocity
+                local speed = math.floor(math.sqrt(velocity.X^2 + velocity.Y^2 + velocity.Z^2))
+                return speed
+            elseif humanoid then
+                -- Fallback to walkspeed
+                return math.floor(humanoid.WalkSpeed)
+            end
         end
         return 0
     end
     
-    local function MonitorCharacter()
-        LocalPlayer.CharacterAdded:Connect(function(newChar)
-            Character = newChar
-            wait(1)
-        end)
-        
-        LocalPlayer.CharacterRemoving:Connect(function()
-            Character = nil
-        end)
-    end
-    
-    MonitorCharacter()
-    
+    -- Function to update the watermark text
     local function UpdateWatermarkText()
-        local parts = {Text}
+        local parts = {Text} -- Use the original Text from constructor
         
-        local displayItems = {}
-        
-        for _, item in ipairs(Options.DisplayOrder) do
-            if item == "Executor" and Options.ShowExecutor then
-                displayItems[#displayItems + 1] = ExecutorName
-            elseif item == "Session" and Options.ShowSessionTime then
-                local sessionTime = os.clock() - SessionStartTime
-                displayItems[#displayItems + 1] = "Session: " .. FormatSessionTime(sessionTime)
-            elseif item == "FPS" and Options.ShowFPS then
-                displayItems[#displayItems + 1] = "FPS: " .. FPS
-            elseif item == "Ping" and Options.ShowPing then
-                local currentTime = tick()
-                if currentTime - LastPingUpdate >= Options.PingUpdateInterval then
-                    CurrentPing = CalculatePing()
-                    LastPingUpdate = currentTime
-                end
-                displayItems[#displayItems + 1] = CurrentPing .. "ms"
-            elseif item == "Players" and Options.ShowPlayerCount then
-                local current = #Players:GetPlayers()
-                local max = Players.MaxPlayers
-                displayItems[#displayItems + 1] = "Players: " .. current .. "/" .. max
-            elseif item == "Health" and Options.ShowHealth then
-                local health = GetHealthPercentage()
-                displayItems[#displayItems + 1] = "HP: " .. health
-            elseif item == "Velocity" and Options.ShowVelocity then
-                local velocity = GetVelocity()
-                displayItems[#displayItems + 1] = "V: " .. velocity
-            elseif item == "Game" and Options.ShowGameName then
-                local gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
-                displayItems[#displayItems + 1] = gameName
-            elseif item == "PlayerName" and Options.ShowPlayerName and LocalPlayer then
-                displayItems[#displayItems + 1] = LocalPlayer.Name
-            elseif item == "DisplayName" and Options.ShowDisplayName and LocalPlayer then
-                displayItems[#displayItems + 1] = LocalPlayer.DisplayName
-            elseif item == "Date" and Options.ShowDate then
-                local time = os.date("*t")
-                local dateStr
-                if Options.DateFormat == "m-d-Y" then
-                    dateStr = time.month .. "-" .. time.day .. "-" .. time.year
-                else
-                    dateStr = time.month .. "/" .. time.day .. "/" .. time.year
-                end
-                displayItems[#displayItems + 1] = dateStr
-            elseif item == "Time" and Options.ShowTime then
-                local time = os.date("*t")
-                local timeStr
-                if Options.TimeFormat == "12h" then
-                    local hour = time.hour % 12
-                    hour = hour == 0 and 12 or hour
-                    local ampm = time.hour < 12 and "AM" or "PM"
-                    timeStr = hour .. ":" .. string.format("%02d", time.min) .. " " .. ampm
-                else
-                    timeStr = string.format("%02d:%02d", time.hour, time.min)
-                end
-                displayItems[#displayItems + 1] = timeStr
+        -- Update executor name (static, doesn't need frequent updates)
+        if Options.ShowExecutor then
+            if not Watermark.ExecutorName then
+                Watermark.ExecutorName = getexecutorname()
             end
+            table.insert(parts, Watermark.ExecutorName)
         end
         
-        if #displayItems > 0 then
-            Items["Text"].Instance.Text = Text .. " | " .. table.concat(displayItems, " | ")
-        else
-            Items["Text"].Instance.Text = Text
+        if Options.ShowFPS then
+            table.insert(parts, "FPS: " .. FPS)
         end
+        
+        -- Update ping less frequently to avoid flickering
+        local currentTime = tick()
+        if Options.ShowPing and (currentTime - LastPingUpdate) >= Options.PingUpdateInterval then
+            CurrentPing = CalculatePing()
+            LastPingUpdate = currentTime
+        end
+        
+        if Options.ShowPing then
+            table.insert(parts, CurrentPing .. "ms")
+        end
+        
+        if Options.ShowHealth then
+            local health = GetHealth()
+            table.insert(parts, "HP:" .. health)
+        end
+        
+        if Options.ShowVelocity then
+            local velocity = GetVelocity()
+            table.insert(parts, "V:" .. velocity)
+        end
+        
+        if Options.ShowPlayerCount then
+            local current = #Players:GetPlayers()
+            local max = Players.MaxPlayers
+            table.insert(parts, "Plr: " .. current .. "/" .. max)
+        end
+        
+        if Options.ShowSessionTime then
+            table.insert(parts, "Ses: " .. GetSessionTime())
+        end
+        
+        if Options.ShowGameName then
+            local gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+            table.insert(parts, gameName)
+        end
+        
+        if Options.ShowPlayerName then
+            table.insert(parts, LocalPlayer.Name)
+        end
+        
+        if Options.ShowDisplayName then
+            table.insert(parts, LocalPlayer.DisplayName)
+        end
+        
+        if Options.ShowDate then
+            local time = os.date("*t")
+            local dateStr
+            if Options.DateFormat == "m-d-Y" then
+                dateStr = time.month .. "-" .. time.day .. "-" .. time.year
+            else
+                dateStr = time.month .. "/" .. time.day .. "/" .. time.year
+            end
+            table.insert(parts, dateStr)
+        end
+        
+        if Options.ShowTime then
+            local time = os.date("*t")
+            local timeStr
+            if Options.TimeFormat == "12h" then
+                local hour = time.hour % 12
+                hour = hour == 0 and 12 or hour
+                local ampm = time.hour < 12 and "AM" or "PM"
+                timeStr = hour .. ":" .. string.format("%02d", time.min) .. " " .. ampm
+            else
+                timeStr = string.format("%02d:%02d", time.hour, time.min)
+            end
+            table.insert(parts, timeStr)
+        end
+        
+        Items["Text"].Instance.Text = table.concat(parts, " | ")
     end
     
     do
@@ -1337,11 +1341,18 @@ local Library do
             end
         end
         
+        -- Initialize ping
         if Options.ShowPing then
             CurrentPing = CalculatePing()
             LastPingUpdate = tick()
         end
         
+        -- Get executor name once
+        if Options.ShowExecutor then
+            Watermark.ExecutorName = getexecutorname()
+        end
+        
+        -- Start updating the watermark text
         UpdateConnection = RunService.Heartbeat:Connect(function()
             UpdateWatermarkText()
             wait(Options.UpdateInterval)
@@ -1368,7 +1379,9 @@ local Library do
     
     function Watermark:SetOptions(NewOptions)
         for option, value in pairs(NewOptions) do
-            Options[option] = value
+            if Options[option] ~= nil then
+                Options[option] = value
+            end
         end
         UpdateWatermarkText()
     end
@@ -1381,30 +1394,33 @@ local Library do
         return copy
     end
     
-    function Watermark:ResetSessionTimer()
-        SessionStartTime = os.clock()
-        UpdateWatermarkText()
-    end
-    
-    function Watermark:GetSessionTime()
-        return os.clock() - SessionStartTime
-    end
-    
     function Watermark:Update()
         UpdateWatermarkText()
     end
     
+    function Watermark:ResetSessionTime()
+        SessionStart = os.time()
+        UpdateWatermarkText()
+    end
+    
+    function Watermark:GetSessionTime()
+        return GetSessionTime()
+    end
+    
     function Watermark:Destroy()
+        -- Clean up FPS counter
         if FPSConnection then
             FPSConnection:Disconnect()
             FPSConnection = nil
         end
         
+        -- Clean up update connection
         if UpdateConnection then
             UpdateConnection:Disconnect()
             UpdateConnection = nil
         end
         
+        -- Destroy the UI
         Items["Watermark"].Instance:Destroy()
     end
 
