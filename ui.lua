@@ -1068,7 +1068,6 @@ local Library do
     local CurrentPing = 0
     local SessionStart = os.time()
     
-    -- FPS counter variables
     local FPS = 0
     local Frames = 0
     local LastFPSUpdate = os.clock()
@@ -1076,7 +1075,6 @@ local Library do
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
     
-    -- FPS counter connection
     local FPSConnection = RunService.RenderStepped:Connect(function()
         Frames += 1
         local now = os.clock()
@@ -1087,12 +1085,10 @@ local Library do
         end
     end)
     
-    -- Function to get executor name
     local getexecutorname = function()
         return identifyexecutor and identifyexecutor() or "Unknown"
     end
     
-    -- Default options table
     local Options = {
         ShowPing = true,
         ShowPlayerCount = true,
@@ -1106,13 +1102,12 @@ local Library do
         ShowSessionTime = true,
         ShowHealth = true,
         ShowVelocity = true,
-        UpdateInterval = 0.1, -- Update more frequently for real-time info
-        PingUpdateInterval = 5, -- Update ping every 5 seconds
-        DateFormat = "m-d-Y", -- Month-Day-Year (12-25-2026)
-        TimeFormat = "12h" -- 12-hour format
+        UpdateInterval = 0.1,
+        PingUpdateInterval = 5,
+        DateFormat = "m-d-Y",
+        TimeFormat = "12h"
     }
     
-    -- Function to calculate ping (more stable)
     local function CalculatePing()
         local stats = game:GetService("Stats")
         local network = stats.Network
@@ -1125,7 +1120,6 @@ local Library do
         return 0
     end
     
-    -- Function to format session time
     local function GetSessionTime()
         local elapsed = os.time() - SessionStart
         local hours = math.floor(elapsed / 3600)
@@ -1139,7 +1133,6 @@ local Library do
         end
     end
     
-    -- Function to get health percentage
     local function GetHealth()
         local character = LocalPlayer.Character
         if character then
@@ -1151,7 +1144,6 @@ local Library do
         return 0
     end
     
-    -- Function to get velocity/walkspeed
     local function GetVelocity()
         local character = LocalPlayer.Character
         if character then
@@ -1159,23 +1151,19 @@ local Library do
             local rootPart = character:FindFirstChild("HumanoidRootPart")
             
             if rootPart then
-                -- Get actual velocity
                 local velocity = rootPart.Velocity
                 local speed = math.floor(math.sqrt(velocity.X^2 + velocity.Y^2 + velocity.Z^2))
                 return speed
             elseif humanoid then
-                -- Fallback to walkspeed
                 return math.floor(humanoid.WalkSpeed)
             end
         end
         return 0
     end
     
-    -- Function to update the watermark text
     local function UpdateWatermarkText()
-        local parts = {Text} -- Use the original Text from constructor
+        local parts = {Text}
         
-        -- Update executor name (static, doesn't need frequent updates)
         if Options.ShowExecutor then
             if not Watermark.ExecutorName then
                 Watermark.ExecutorName = getexecutorname()
@@ -1187,7 +1175,6 @@ local Library do
             table.insert(parts, "FPS: " .. FPS)
         end
         
-        -- Update ping less frequently to avoid flickering
         local currentTime = tick()
         if Options.ShowPing and (currentTime - LastPingUpdate) >= Options.PingUpdateInterval then
             CurrentPing = CalculatePing()
@@ -1341,18 +1328,15 @@ local Library do
             end
         end
         
-        -- Initialize ping
         if Options.ShowPing then
             CurrentPing = CalculatePing()
             LastPingUpdate = tick()
         end
         
-        -- Get executor name once
         if Options.ShowExecutor then
             Watermark.ExecutorName = getexecutorname()
         end
         
-        -- Start updating the watermark text
         UpdateConnection = RunService.Heartbeat:Connect(function()
             UpdateWatermarkText()
             wait(Options.UpdateInterval)
@@ -1408,19 +1392,16 @@ local Library do
     end
     
     function Watermark:Destroy()
-        -- Clean up FPS counter
         if FPSConnection then
             FPSConnection:Disconnect()
             FPSConnection = nil
         end
         
-        -- Clean up update connection
         if UpdateConnection then
             UpdateConnection:Disconnect()
             UpdateConnection = nil
         end
         
-        -- Destroy the UI
         Items["Watermark"].Instance:Destroy()
     end
 
