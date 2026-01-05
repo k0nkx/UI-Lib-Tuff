@@ -1105,7 +1105,11 @@ local Library do
         UpdateInterval = 0.1,
         PingUpdateInterval = 5,
         DateFormat = "m-d-Y",
-        TimeFormat = "12h"
+        TimeFormat = "12h",
+        ShowGlow = true, -- New option for glow visibility
+        GlowColor = Color3.fromRGB(31, 226, 130), -- Default glow color matching the accent line
+        GlowTransparency = 0.7, -- Glow transparency level
+        GlowSize = 20 -- How much larger the glow is than the watermark
     }
     
     local function CalculatePing()
@@ -1246,7 +1250,31 @@ local Library do
         Items["Text"].Instance.Text = table.concat(parts, " | ")
     end
     
+    local function UpdateGlowSize()
+        if Items["Glow"] and Items["Watermark"] then
+            local watermarkSize = Items["Watermark"].Instance.AbsoluteSize
+            local glowSize = UDim2.new(0, watermarkSize.X + Options.GlowSize, 0, watermarkSize.Y + Options.GlowSize)
+            Items["Glow"].Instance.Size = glowSize
+            Items["Glow"].Instance.Position = UDim2.new(0, -Options.GlowSize/2, 0, -Options.GlowSize/2)
+        end
+    end
+    
     do
+        -- Create glow effect around the watermark
+        Items["Glow"] = Instances:Create("ImageLabel", {
+            Parent = Library.Holder.Instance,
+            Name = "\0",
+            Image = "rbxassetid://4996891970",
+            ImageColor3 = Options.GlowColor,
+            ImageTransparency = Options.GlowTransparency,
+            ScaleType = Enum.ScaleType.Slice,
+            SliceCenter = Rect.new(49, 49, 450, 450),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = -1,
+            Visible = Options.ShowGlow
+        })
+        
         Items["Watermark"] = Instances:Create("Frame", {
             Parent = Library.Holder.Instance,
             BorderColor3 = FromRGB(0, 0, 0),
@@ -1328,6 +1356,17 @@ local Library do
             end
         end
         
+        -- Set glow as parent of watermark for proper positioning
+        Items["Watermark"].Instance.Parent = Items["Glow"].Instance
+        
+        -- Update glow size when watermark size changes
+        Items["Watermark"].Instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            UpdateGlowSize()
+        end)
+        
+        -- Initial glow size update
+        task.defer(UpdateGlowSize)
+        
         if Options.ShowPing then
             CurrentPing = CalculatePing()
             LastPingUpdate = tick()
@@ -1345,6 +1384,10 @@ local Library do
 
     function Watermark:SetVisibility(Bool)
         Items["Watermark"].Instance.Visible = Bool
+        if Items["Glow"] then
+            Items["Glow"].Instance.Visible = Bool and Options.ShowGlow
+        end
+        
         if Bool then
             if UpdateConnection then
                 UpdateConnection:Disconnect()
@@ -1365,6 +1408,17 @@ local Library do
         for option, value in pairs(NewOptions) do
             if Options[option] ~= nil then
                 Options[option] = value
+                
+                -- Update glow if related options changed
+                if option == "ShowGlow" and Items["Glow"] then
+                    Items["Glow"].Instance.Visible = value
+                elseif option == "GlowColor" and Items["Glow"] then
+                    Items["Glow"].Instance.ImageColor3 = value
+                elseif option == "GlowTransparency" and Items["Glow"] then
+                    Items["Glow"].Instance.ImageTransparency = value
+                elseif option == "GlowSize" and Items["Glow"] then
+                    UpdateGlowSize()
+                end
             end
         end
         UpdateWatermarkText()
@@ -1391,6 +1445,27 @@ local Library do
         return GetSessionTime()
     end
     
+    function Watermark:SetGlowColor(Color)
+        Options.GlowColor = Color
+        if Items["Glow"] then
+            Items["Glow"].Instance.ImageColor3 = Color
+        end
+    end
+    
+    function Watermark:SetGlowTransparency(Transparency)
+        Options.GlowTransparency = Transparency
+        if Items["Glow"] then
+            Items["Glow"].Instance.ImageTransparency = Transparency
+        end
+    end
+    
+    function Watermark:ToggleGlow(Enabled)
+        Options.ShowGlow = Enabled
+        if Items["Glow"] then
+            Items["Glow"].Instance.Visible = Enabled
+        end
+    end
+    
     function Watermark:Destroy()
         if FPSConnection then
             FPSConnection:Disconnect()
@@ -1402,7 +1477,11 @@ local Library do
             UpdateConnection = nil
         end
         
-        Items["Watermark"].Instance:Destroy()
+        if Items["Glow"] then
+            Items["Glow"].Instance:Destroy()
+        else
+            Items["Watermark"].Instance:Destroy()
+        end
     end
 
     return Watermark
