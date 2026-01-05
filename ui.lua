@@ -1422,8 +1422,8 @@ end
             BorderSizePixel = 0,
             AutomaticSize = Enum.AutomaticSize.XY,
             BackgroundColor3 = FromRGB(43, 43, 43)
-        })  Items["KeybindListOutline"]:AddToTheme({BackgroundColor3 = "Window Background", BorderColor3 = "Outline"})
-
+        })  
+        Items["KeybindListOutline"]:AddToTheme({BackgroundColor3 = "Window Background", BorderColor3 = "Outline"})
         Items["KeybindListOutline"]:MakeDraggable()
 
         Instances:Create("UIStroke", {
@@ -1441,7 +1441,8 @@ end
             Size = UDim2New(1, -10, 1, -10),
             BorderSizePixel = 2,
             BackgroundColor3 = FromRGB(12, 12, 12)
-        })  Items["Inline"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Border"})
+        })  
+        Items["Inline"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Border"})
 
         Instances:Create("UIStroke", {
             Parent = Items["Inline"].Instance,
@@ -1472,34 +1473,34 @@ end
             AutomaticSize = Enum.AutomaticSize.X,
             TextSize = 12,
             BackgroundColor3 = FromRGB(255, 255, 255)
-        })  Items["Title"]:AddToTheme({TextColor3 = "Text"})
+        })  
+        Items["Title"]:AddToTheme({TextColor3 = "Text"})
 
-        -- NEW: Green line under the title
+        -- extra green line under title
         Items["TitleLiner"] = Instances:Create("Frame", {
             Parent = Items["Inline"].Instance,
             Name = "\0",
-            Position = UDim2New(0, -2, 0, 14), -- Positioned under the title
-            BorderColor3 = FromRGB(0, 0, 0),
-            Size = UDim2New(0, 0, 0, 1), -- Single pixel height
+            Position = UDim2New(0, 0, 0, 18), -- right under the title
+            Size = UDim2New(1, 0, 0, 2),
             BorderSizePixel = 0,
-            AutomaticSize = Enum.AutomaticSize.X, -- Matches title width
             BackgroundColor3 = FromRGB(31, 226, 130)
-        })  Items["TitleLiner"]:AddToTheme({BackgroundColor3 = "Accent"})
+        })
+        Items["TitleLiner"]:AddToTheme({BackgroundColor3 = "Accent"})
 
         Instances:Create("UIGradient", {
             Parent = Items["TitleLiner"].Instance,
             Rotation = 90,
             Color = RGBSequence{
-                RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), 
+                RGBSequenceKeypoint(0, FromRGB(255, 255, 255)),
                 RGBSequenceKeypoint(1, FromRGB(125, 125, 125))
             }
-        }) 
+        })
 
         Items["Content"] = Instances:Create("Frame", {
             Parent = Items["Inline"].Instance,
             Name = "\0",
             BackgroundTransparency = 1,
-            Position = UDim2New(0, 4, 0, 21), -- Adjusted position (was 21)
+            Position = UDim2New(0, 4, 0, 21),
             BorderColor3 = FromRGB(0, 0, 0),
             BorderSizePixel = 0,
             AutomaticSize = Enum.AutomaticSize.XY,
@@ -1511,7 +1512,7 @@ end
             Padding = UDimNew(0, 2),
             SortOrder = Enum.SortOrder.LayoutOrder
         }) 
-        
+
         Instances:Create("UIPadding", {
             Parent = Items["Content"].Instance,
             PaddingBottom = UDimNew(0, 7),
@@ -1526,13 +1527,14 @@ end
             Size = UDim2New(1, -10, 0, 2),
             BorderSizePixel = 0,
             BackgroundColor3 = FromRGB(31, 226, 130)
-        })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
+        })  
+        Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
 
         Instances:Create("UIGradient", {
             Parent = Items["Liner"].Instance,
             Rotation = 90,
             Color = RGBSequence{
-                RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), 
+                RGBSequenceKeypoint(0, FromRGB(255, 255, 255)),
                 RGBSequenceKeypoint(1, FromRGB(125, 125, 125))
             }
         }) 
@@ -1553,7 +1555,8 @@ end
             AutomaticSize = Enum.AutomaticSize.X,
             TextSize = 12,
             BackgroundColor3 = FromRGB(255, 255, 255)
-        })  NewKey:AddToTheme({TextColor3 = "Text"})
+        })  
+        NewKey:AddToTheme({TextColor3 = "Text"})
 
         function NewKey:Set(Mode, Name, Key)
             NewKey.Instance.Text = "( " .. Mode .. " )  " .. Name .. "   —   [ " .. Key .. " ] "
@@ -1578,6 +1581,7 @@ end
 
     return KeybindList
 end
+
 
     Library.Notification = function(self, Text, Duration, Color, Icon)
         local Items = { } do
