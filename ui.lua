@@ -1462,7 +1462,7 @@ end
                 FontFace = Library.Font,
                 TextColor3 = FromRGB(180, 180, 180),
                 BorderColor3 = FromRGB(0, 0, 0),
-                Text = "           Keybind List",
+                Text = "Keybind List",
                 Name = "\0",
                 Size = UDim2New(0, 0, 0, 20),
                 Position = UDim2New(0, -2, 0, -4),
@@ -1520,7 +1520,7 @@ end
                 FontFace = Library.Font,
                 TextColor3 = FromRGB(31, 226, 130),
                 BorderColor3 = FromRGB(0, 0, 0),
-                Text = "( " .. Mode .. " ) " .. Name .. "   |   [ " .. Key .. " ] ",
+                Text = "( " .. Mode .. " )  " .. Name .. "   —   [ " .. Key .. " ] ",
                 Name = "\0",
                 Size = UDim2New(0, 0, 0, 17),
                 BackgroundTransparency = 1,
@@ -1532,7 +1532,7 @@ end
             })  NewKey:AddToTheme({TextColor3 = "Text"})
 
             function NewKey:Set(Mode, Name, Key)
-                NewKey.Instance.Text = "( " .. Mode .. " ) " .. Name .. "   |   [ " .. Key .. " ] "
+                NewKey.Instance.Text = "( " .. Mode .. " )  " .. Name .. "   —   [ " .. Key .. " ] "
             end
 
             function NewKey:SetStatus(Bool)
