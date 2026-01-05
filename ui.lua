@@ -1061,22 +1061,21 @@ local Library do
     end
 
     Library.Watermark = function(self, Text, Icon)
-    local Watermark = {}
-    local Items = {}
+    local Watermark = { }
+    local Items = { }
     local UpdateConnection = nil
     local LastPingUpdate = 0
     local CurrentPing = 0
     local SessionStart = os.time()
-
+    
     local FPS = 0
     local Frames = 0
     local LastFPSUpdate = os.clock()
-
     local RunService = game:GetService("RunService")
     local Players = game:GetService("Players")
     local MarketplaceService = game:GetService("MarketplaceService")
     local LocalPlayer = Players.LocalPlayer
-
+    
     local FPSConnection = RunService.RenderStepped:Connect(function()
         Frames += 1
         local now = os.clock()
@@ -1086,11 +1085,17 @@ local Library do
             LastFPSUpdate = now
         end
     end)
-
-    local function getexecutorname()
+    
+    local getexecutorname = function()
         return identifyexecutor and identifyexecutor() or "Unknown"
     end
-
+    
+    local CachedGameName
+    pcall(function()
+        CachedGameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
+    end)
+    CachedGameName = CachedGameName or "Unknown Game"
+    
     local Options = {
         ShowPing = true,
         ShowPlayerCount = true,
@@ -1109,175 +1114,181 @@ local Library do
         DateFormat = "m-d-Y",
         TimeFormat = "12h"
     }
-
-    local CachedGameName = "Unknown"
-    pcall(function()
-        CachedGameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
-    end)
-
+    
     local function CalculatePing()
         local stats = game:GetService("Stats")
-        local network = stats:FindFirstChild("Network")
-        if network and network:FindFirstChild("ServerStatsItem") then
-            local ping = network.ServerStatsItem:FindFirstChild("Data Ping")
+        local network = stats.Network
+        if network then
+            local ping = network.ServerStatsItem["Data Ping"]
             if ping then
                 return math.floor(ping:GetValue())
             end
         end
         return 0
     end
-
+    
     local function GetSessionTime()
         local elapsed = os.time() - SessionStart
         local h = math.floor(elapsed / 3600)
         local m = math.floor((elapsed % 3600) / 60)
         local s = elapsed % 60
+        
         if h > 0 then
             return string.format("%d:%02d:%02d", h, m, s)
+        else
+            return string.format("%02d:%02d", m, s)
         end
-        return string.format("%02d:%02d", m, s)
     end
-
+    
     local function GetHealth()
         local c = LocalPlayer.Character
-        local h = c and c:FindFirstChildOfClass("Humanoid")
-        return h and math.floor(h.Health) or 0
-    end
-
-    local function GetVelocity()
-        local c = LocalPlayer.Character
-        local hrp = c and c:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            local v = hrp.Velocity
-            return math.floor((v.X^2 + v.Y^2 + v.Z^2) ^ 0.5)
+        if c then
+            local h = c:FindFirstChildOfClass("Humanoid")
+            if h then
+                return math.floor(h.Health)
+            end
         end
         return 0
     end
-
+    
+    local function GetVelocity()
+        local c = LocalPlayer.Character
+        if c then
+            local hrp = c:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local v = hrp.Velocity
+                return math.floor((v.X^2 + v.Y^2 + v.Z^2)^0.5)
+            end
+        end
+        return 0
+    end
+    
     local function UpdateWatermarkText()
         local parts = { Text }
-
+        
         if Options.ShowExecutor then
             Watermark.ExecutorName = Watermark.ExecutorName or getexecutorname()
             table.insert(parts, Watermark.ExecutorName)
         end
-
+        
         if Options.ShowFPS then
-            table.insert(parts, "FPS:" .. FPS)
+            table.insert(parts, "FPS: " .. FPS)
         end
-
+        
         local now = tick()
         if Options.ShowPing and now - LastPingUpdate >= Options.PingUpdateInterval then
             CurrentPing = CalculatePing()
             LastPingUpdate = now
         end
-
+        
         if Options.ShowPing then
             table.insert(parts, CurrentPing .. "ms")
         end
-
+        
         if Options.ShowHealth then
             table.insert(parts, "HP:" .. GetHealth())
         end
-
+        
         if Options.ShowVelocity then
             table.insert(parts, "V:" .. GetVelocity())
         end
-
+        
         if Options.ShowPlayerCount then
-            table.insert(parts, "Plr:" .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers)
+            table.insert(parts, "Plr: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers)
         end
-
+        
         if Options.ShowSessionTime then
-            table.insert(parts, "Ses:" .. GetSessionTime())
+            table.insert(parts, "Ses: " .. GetSessionTime())
         end
-
+        
         if Options.ShowGameName then
             table.insert(parts, CachedGameName)
         end
-
+        
         if Options.ShowDate then
             local t = os.date("*t")
             table.insert(parts, t.month .. "-" .. t.day .. "-" .. t.year)
         end
-
+        
         if Options.ShowTime then
             local t = os.date("*t")
             local h = t.hour % 12
             h = h == 0 and 12 or h
-            table.insert(parts, h .. ":" .. string.format("%02d", t.min) .. (t.hour < 12 and " AM" or " PM"))
+            local ampm = t.hour < 12 and "AM" or "PM"
+            table.insert(parts, h .. ":" .. string.format("%02d", t.min) .. " " .. ampm)
         end
-
+        
         Items.Text.Instance.Text = table.concat(parts, " | ")
     end
-
-    Items.Watermark = Instances:Create("Frame", {
-        Parent = Library.Holder.Instance,
-        AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 0, 20),
-        Size = UDim2.new(0, 0, 0, 25),
-        AutomaticSize = Enum.AutomaticSize.X,
-        BackgroundColor3 = FromRGB(12, 12, 12),
-        BorderSizePixel = 2
-    })
-
-    Items.Watermark:MakeDraggable()
-
-    Instances:Create("UIStroke", {
-        Parent = Items.Watermark.Instance,
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    })
-
-    Items.Glow = Instances:Create("ImageLabel", {
-        Parent = Items.Watermark.Instance,
-        Image = "rbxassetid://4996891970",
-        BackgroundTransparency = 1,
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.fromScale(0.5, 0.5),
-        ZIndex = Items.Watermark.Instance.ZIndex - 1,
-        ScaleType = Enum.ScaleType.Slice,
-        SliceCenter = Rect.new(20, 20, 80, 80),
-        ImageTransparency = 0.25
-    })
-
-    local function UpdateGlow()
-        local s = Items.Watermark.Instance.AbsoluteSize
-        Items.Glow.Instance.Size = UDim2.fromOffset(s.X + 18, s.Y + 18)
+    
+    do
+        Items.Watermark = Instances:Create("Frame", {
+            Parent = Library.Holder.Instance,
+            AnchorPoint = Vector2New(0.5, 0),
+            Position = UDim2New(0.5, 0, 0, 20),
+            Size = UDim2New(0, 0, 0, 25),
+            AutomaticSize = Enum.AutomaticSize.X,
+            BorderSizePixel = 2,
+            BackgroundColor3 = FromRGB(12, 12, 12)
+        })
+        Items.Watermark:MakeDraggable()
+        
+        -- GLOW IMAGE (ADDED)
+        Items.Glow = Instances:Create("ImageLabel", {
+            Parent = Items.Watermark.Instance,
+            ZIndex = Items.Watermark.Instance.ZIndex - 1,
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://4996891970",
+            ScaleType = Enum.ScaleType.Slice,
+            SliceCenter = Rect.new(50, 50, 450, 450),
+            Size = UDim2New(1, 20, 1, 20),
+            Position = UDim2New(0, -10, 0, -10)
+        })
+        
+        Items.Text = Instances:Create("TextLabel", {
+            Parent = Items.Watermark.Instance,
+            BackgroundTransparency = 1,
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2New(0, 0, 1, 0),
+            FontFace = Library.Font,
+            TextSize = 12,
+            TextColor3 = FromRGB(180, 180, 180),
+            Text = Text
+        })
+        
+        Instances:Create("UIPadding", {
+            Parent = Items.Watermark.Instance,
+            PaddingLeft = UDimNew(0, 8),
+            PaddingRight = UDimNew(0, 8)
+        })
+        
+        if Icon and type(Icon) == "table" then
+            Items.Icon = Instances:Create("ImageLabel", {
+                Parent = Items.Watermark.Instance,
+                BackgroundTransparency = 1,
+                Image = "rbxassetid://" .. Icon[1],
+                ImageColor3 = Icon[2] or Color3.new(1,1,1),
+                Size = UDim2New(0, 18, 0, 18),
+                Position = UDim2New(0, -3, 0, 4)
+            })
+            Items.Text.Instance.Position = UDim2New(0, 20, 0, 0)
+        end
+        
+        UpdateConnection = RunService.Heartbeat:Connect(function()
+            UpdateWatermarkText()
+            task.wait(Options.UpdateInterval)
+        end)
     end
-
-    Items.Watermark.Instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateGlow)
-    UpdateGlow()
-
-    Items.Text = Instances:Create("TextLabel", {
-        Parent = Items.Watermark.Instance,
-        BackgroundTransparency = 1,
-        AutomaticSize = Enum.AutomaticSize.X,
-        Size = UDim2.new(0, 0, 1, 0),
-        TextSize = 12,
-        TextColor3 = FromRGB(180, 180, 180),
-        FontFace = Library.Font,
-        Text = Text
-    })
-
-    Instances:Create("UIPadding", {
-        Parent = Items.Watermark.Instance,
-        PaddingLeft = UDim.new(0, 8),
-        PaddingRight = UDim.new(0, 8)
-    })
-
-    UpdateConnection = RunService.Heartbeat:Connect(function()
-        UpdateWatermarkText()
-        task.wait(Options.UpdateInterval)
-    end)
-
+    
     function Watermark:Destroy()
         if FPSConnection then FPSConnection:Disconnect() end
         if UpdateConnection then UpdateConnection:Disconnect() end
         Items.Watermark.Instance:Destroy()
     end
-
+    
     return Watermark
 end
+
 
     Library.KeybindList = function(self)
         local KeybindList = { }
