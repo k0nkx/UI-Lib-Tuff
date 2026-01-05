@@ -1073,7 +1073,6 @@ local Library do
     local LastFPSUpdate = os.clock()
     local RunService = game:GetService("RunService")
     local Players = game:GetService("Players")
-    local MarketplaceService = game:GetService("MarketplaceService")
     local LocalPlayer = Players.LocalPlayer
     
     local FPSConnection = RunService.RenderStepped:Connect(function()
@@ -1089,12 +1088,6 @@ local Library do
     local getexecutorname = function()
         return identifyexecutor and identifyexecutor() or "Unknown"
     end
-    
-    local CachedGameName
-    pcall(function()
-        CachedGameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
-    end)
-    CachedGameName = CachedGameName or "Unknown Game"
     
     local Options = {
         ShowPing = true,
@@ -1129,45 +1122,52 @@ local Library do
     
     local function GetSessionTime()
         local elapsed = os.time() - SessionStart
-        local h = math.floor(elapsed / 3600)
-        local m = math.floor((elapsed % 3600) / 60)
-        local s = elapsed % 60
+        local hours = math.floor(elapsed / 3600)
+        local minutes = math.floor((elapsed % 3600) / 60)
+        local seconds = elapsed % 60
         
-        if h > 0 then
-            return string.format("%d:%02d:%02d", h, m, s)
+        if hours > 0 then
+            return string.format("%d:%02d:%02d", hours, minutes, seconds)
         else
-            return string.format("%02d:%02d", m, s)
+            return string.format("%02d:%02d", minutes, seconds)
         end
     end
     
     local function GetHealth()
-        local c = LocalPlayer.Character
-        if c then
-            local h = c:FindFirstChildOfClass("Humanoid")
-            if h then
-                return math.floor(h.Health)
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                return math.floor(humanoid.Health)
             end
         end
         return 0
     end
     
     local function GetVelocity()
-        local c = LocalPlayer.Character
-        if c then
-            local hrp = c:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local v = hrp.Velocity
-                return math.floor((v.X^2 + v.Y^2 + v.Z^2)^0.5)
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            
+            if rootPart then
+                local velocity = rootPart.Velocity
+                local speed = math.floor(math.sqrt(velocity.X^2 + velocity.Y^2 + velocity.Z^2))
+                return speed
+            elseif humanoid then
+                return math.floor(humanoid.WalkSpeed)
             end
         end
         return 0
     end
     
     local function UpdateWatermarkText()
-        local parts = { Text }
+        local parts = {Text}
         
         if Options.ShowExecutor then
-            Watermark.ExecutorName = Watermark.ExecutorName or getexecutorname()
+            if not Watermark.ExecutorName then
+                Watermark.ExecutorName = getexecutorname()
+            end
             table.insert(parts, Watermark.ExecutorName)
         end
         
@@ -1175,10 +1175,10 @@ local Library do
             table.insert(parts, "FPS: " .. FPS)
         end
         
-        local now = tick()
-        if Options.ShowPing and now - LastPingUpdate >= Options.PingUpdateInterval then
+        local currentTime = tick()
+        if Options.ShowPing and (currentTime - LastPingUpdate) >= Options.PingUpdateInterval then
             CurrentPing = CalculatePing()
-            LastPingUpdate = now
+            LastPingUpdate = currentTime
         end
         
         if Options.ShowPing then
@@ -1186,15 +1186,19 @@ local Library do
         end
         
         if Options.ShowHealth then
-            table.insert(parts, "HP:" .. GetHealth())
+            local health = GetHealth()
+            table.insert(parts, "HP:" .. health)
         end
         
         if Options.ShowVelocity then
-            table.insert(parts, "V:" .. GetVelocity())
+            local velocity = GetVelocity()
+            table.insert(parts, "V:" .. velocity)
         end
         
         if Options.ShowPlayerCount then
-            table.insert(parts, "Plr: " .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers)
+            local current = #Players:GetPlayers()
+            local max = Players.MaxPlayers
+            table.insert(parts, "Plr: " .. current .. "/" .. max)
         end
         
         if Options.ShowSessionTime then
@@ -1202,94 +1206,207 @@ local Library do
         end
         
         if Options.ShowGameName then
-            table.insert(parts, CachedGameName)
+            local gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
+            table.insert(parts, gameName)
+        end
+        
+        if Options.ShowPlayerName then
+            table.insert(parts, LocalPlayer.Name)
+        end
+        
+        if Options.ShowDisplayName then
+            table.insert(parts, LocalPlayer.DisplayName)
         end
         
         if Options.ShowDate then
-            local t = os.date("*t")
-            table.insert(parts, t.month .. "-" .. t.day .. "-" .. t.year)
+            local time = os.date("*t")
+            local dateStr
+            if Options.DateFormat == "m-d-Y" then
+                dateStr = time.month .. "-" .. time.day .. "-" .. time.year
+            else
+                dateStr = time.month .. "/" .. time.day .. "/" .. time.year
+            end
+            table.insert(parts, dateStr)
         end
         
         if Options.ShowTime then
-            local t = os.date("*t")
-            local h = t.hour % 12
-            h = h == 0 and 12 or h
-            local ampm = t.hour < 12 and "AM" or "PM"
-            table.insert(parts, h .. ":" .. string.format("%02d", t.min) .. " " .. ampm)
+            local time = os.date("*t")
+            local timeStr
+            if Options.TimeFormat == "12h" then
+                local hour = time.hour % 12
+                hour = hour == 0 and 12 or hour
+                local ampm = time.hour < 12 and "AM" or "PM"
+                timeStr = hour .. ":" .. string.format("%02d", time.min) .. " " .. ampm
+            else
+                timeStr = string.format("%02d:%02d", time.hour, time.min)
+            end
+            table.insert(parts, timeStr)
         end
         
-        Items.Text.Instance.Text = table.concat(parts, " | ")
+        Items["Text"].Instance.Text = table.concat(parts, " | ")
     end
     
     do
-        Items.Watermark = Instances:Create("Frame", {
+        Items["Watermark"] = Instances:Create("Frame", {
             Parent = Library.Holder.Instance,
+            BorderColor3 = FromRGB(0, 0, 0),
             AnchorPoint = Vector2New(0.5, 0),
+            Name = "\0",
             Position = UDim2New(0.5, 0, 0, 20),
             Size = UDim2New(0, 0, 0, 25),
-            AutomaticSize = Enum.AutomaticSize.X,
             BorderSizePixel = 2,
-            BackgroundColor3 = FromRGB(12, 12, 12)
-        })
-        Items.Watermark:MakeDraggable()
-        
-        -- GLOW IMAGE (ADDED)
-        Items.Glow = Instances:Create("ImageLabel", {
-            Parent = Items.Watermark.Instance,
-            ZIndex = Items.Watermark.Instance.ZIndex - 1,
-            BackgroundTransparency = 1,
-            Image = "rbxassetid://4996891970",
-            ScaleType = Enum.ScaleType.Slice,
-            SliceCenter = Rect.new(50, 50, 450, 450),
-            Size = UDim2New(1, 20, 1, 20),
-            Position = UDim2New(0, -10, 0, -10)
-        })
-        
-        Items.Text = Instances:Create("TextLabel", {
-            Parent = Items.Watermark.Instance,
-            BackgroundTransparency = 1,
             AutomaticSize = Enum.AutomaticSize.X,
-            Size = UDim2New(0, 0, 1, 0),
+            BackgroundColor3 = FromRGB(12, 12, 12)
+        })  
+        Items["Watermark"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
+
+        Items["Watermark"]:MakeDraggable()
+
+        Instances:Create("UIStroke", {
+            Parent = Items["Watermark"].Instance,
+            Color = FromRGB(68, 68, 68),
+            LineJoinMode = Enum.LineJoinMode.Miter,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        }):AddToTheme({Color = "Border"})
+
+        Items["Text"] = Instances:Create("TextLabel", {
+            Parent = Items["Watermark"].Instance,
             FontFace = Library.Font,
-            TextSize = 12,
             TextColor3 = FromRGB(180, 180, 180),
-            Text = Text
-        })
-        
+            BorderColor3 = FromRGB(0, 0, 0),
+            Text = Text,
+            Name = "\0",
+            BackgroundTransparency = 1,
+            Size = UDim2New(0, 0, 1, 0),
+            BorderSizePixel = 0,
+            AutomaticSize = Enum.AutomaticSize.X,
+            TextSize = 12,
+            BackgroundColor3 = FromRGB(255, 255, 255)
+        })  
+        Items["Text"]:AddToTheme({TextColor3 = "Text"})
+
         Instances:Create("UIPadding", {
-            Parent = Items.Watermark.Instance,
-            PaddingLeft = UDimNew(0, 8),
-            PaddingRight = UDimNew(0, 8)
-        })
+            Parent = Items["Watermark"].Instance,
+            PaddingRight = UDimNew(0, 8),
+            PaddingLeft = UDimNew(0, 8)
+        }) 
+
+        Items["Liner"] = Instances:Create("Frame", {
+            Parent = Items["Watermark"].Instance,
+            Name = "\0",
+            Position = UDim2New(0, -8, 0, 0),
+            BorderColor3 = FromRGB(0, 0, 0),
+            Size = UDim2New(1, 16, 0, 2),
+            BorderSizePixel = 0,
+            BackgroundColor3 = FromRGB(31, 226, 130)
+        })  
+        Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
+
+        Instances:Create("UIGradient", {
+            Parent = Items["Liner"].Instance,
+            Rotation = 90,
+            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(94, 94, 94))}
+        }) 
+
+        if Icon then 
+            if type(Icon) == "table" then
+                Items["Icon"] = Instances:Create("ImageLabel", {
+                    Parent = Items["Watermark"].Instance,
+                    ImageColor3 = Icon[2] or FromRGB(255, 255, 255),
+                    ScaleType = Enum.ScaleType.Fit,
+                    BorderColor3 = FromRGB(0, 0, 0),
+                    Name = "\0",
+                    Image = "rbxassetid://" .. Icon[1],
+                    BackgroundTransparency = 1,
+                    Position = UDim2New(0, -3, 0, 4),
+                    Size = UDim2New(0, 18, 0, 18),
+                    BorderSizePixel = 0,
+                    BackgroundColor3 = FromRGB(255, 255, 255)
+                }) 
+
+                Items["Text"].Instance.Position = UDim2New(0, 20, 0, 0)
+            end
+        end
         
-        if Icon and type(Icon) == "table" then
-            Items.Icon = Instances:Create("ImageLabel", {
-                Parent = Items.Watermark.Instance,
-                BackgroundTransparency = 1,
-                Image = "rbxassetid://" .. Icon[1],
-                ImageColor3 = Icon[2] or Color3.new(1,1,1),
-                Size = UDim2New(0, 18, 0, 18),
-                Position = UDim2New(0, -3, 0, 4)
-            })
-            Items.Text.Instance.Position = UDim2New(0, 20, 0, 0)
+        if Options.ShowPing then
+            CurrentPing = CalculatePing()
+            LastPingUpdate = tick()
+        end
+        
+        if Options.ShowExecutor then
+            Watermark.ExecutorName = getexecutorname()
         end
         
         UpdateConnection = RunService.Heartbeat:Connect(function()
             UpdateWatermarkText()
-            task.wait(Options.UpdateInterval)
+            wait(Options.UpdateInterval)
         end)
+    end
+
+    function Watermark:SetVisibility(Bool)
+        Items["Watermark"].Instance.Visible = Bool
+        if Bool then
+            if UpdateConnection then
+                UpdateConnection:Disconnect()
+            end
+            UpdateConnection = RunService.Heartbeat:Connect(function()
+                UpdateWatermarkText()
+                wait(Options.UpdateInterval)
+            end)
+        else
+            if UpdateConnection then
+                UpdateConnection:Disconnect()
+                UpdateConnection = nil
+            end
+        end
+    end
+    
+    function Watermark:SetOptions(NewOptions)
+        for option, value in pairs(NewOptions) do
+            if Options[option] ~= nil then
+                Options[option] = value
+            end
+        end
+        UpdateWatermarkText()
+    end
+    
+    function Watermark:GetOptions()
+        local copy = {}
+        for k, v in pairs(Options) do
+            copy[k] = v
+        end
+        return copy
+    end
+    
+    function Watermark:Update()
+        UpdateWatermarkText()
+    end
+    
+    function Watermark:ResetSessionTime()
+        SessionStart = os.time()
+        UpdateWatermarkText()
+    end
+    
+    function Watermark:GetSessionTime()
+        return GetSessionTime()
     end
     
     function Watermark:Destroy()
-        if FPSConnection then FPSConnection:Disconnect() end
-        if UpdateConnection then UpdateConnection:Disconnect() end
-        Items.Watermark.Instance:Destroy()
+        if FPSConnection then
+            FPSConnection:Disconnect()
+            FPSConnection = nil
+        end
+        
+        if UpdateConnection then
+            UpdateConnection:Disconnect()
+            UpdateConnection = nil
+        end
+        
+        Items["Watermark"].Instance:Destroy()
     end
-    
+
     return Watermark
 end
-
-
     Library.KeybindList = function(self)
         local KeybindList = { }
         Library.KeyList = KeybindList
