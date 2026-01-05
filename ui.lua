@@ -1061,20 +1061,22 @@ local Library do
     end
 
     Library.Watermark = function(self, Text, Icon)
-    local Watermark = { }
-    local Items = { }
+    local Watermark = {}
+    local Items = {}
     local UpdateConnection = nil
     local LastPingUpdate = 0
     local CurrentPing = 0
     local SessionStart = os.time()
-    
+
     local FPS = 0
     local Frames = 0
     local LastFPSUpdate = os.clock()
+
     local RunService = game:GetService("RunService")
     local Players = game:GetService("Players")
+    local MarketplaceService = game:GetService("MarketplaceService")
     local LocalPlayer = Players.LocalPlayer
-    
+
     local FPSConnection = RunService.RenderStepped:Connect(function()
         Frames += 1
         local now = os.clock()
@@ -1084,11 +1086,11 @@ local Library do
             LastFPSUpdate = now
         end
     end)
-    
-    local getexecutorname = function()
+
+    local function getexecutorname()
         return identifyexecutor and identifyexecutor() or "Unknown"
     end
-    
+
     local Options = {
         ShowPing = true,
         ShowPlayerCount = true,
@@ -1105,408 +1107,178 @@ local Library do
         UpdateInterval = 0.1,
         PingUpdateInterval = 5,
         DateFormat = "m-d-Y",
-        TimeFormat = "12h",
-        GlowEnabled = true, -- New option for glow
-        GlowTransparency = 0.5, -- New option for glow transparency
-        GlowSize = 10 -- New option for glow padding around the watermark
+        TimeFormat = "12h"
     }
-    
+
+    local CachedGameName = "Unknown"
+    pcall(function()
+        CachedGameName = MarketplaceService:GetProductInfo(game.PlaceId).Name
+    end)
+
     local function CalculatePing()
         local stats = game:GetService("Stats")
-        local network = stats.Network
-        if network then
-            local ping = network.ServerStatsItem["Data Ping"]
+        local network = stats:FindFirstChild("Network")
+        if network and network:FindFirstChild("ServerStatsItem") then
+            local ping = network.ServerStatsItem:FindFirstChild("Data Ping")
             if ping then
                 return math.floor(ping:GetValue())
             end
         end
         return 0
     end
-    
+
     local function GetSessionTime()
         local elapsed = os.time() - SessionStart
-        local hours = math.floor(elapsed / 3600)
-        local minutes = math.floor((elapsed % 3600) / 60)
-        local seconds = elapsed % 60
-        
-        if hours > 0 then
-            return string.format("%d:%02d:%02d", hours, minutes, seconds)
-        else
-            return string.format("%02d:%02d", minutes, seconds)
+        local h = math.floor(elapsed / 3600)
+        local m = math.floor((elapsed % 3600) / 60)
+        local s = elapsed % 60
+        if h > 0 then
+            return string.format("%d:%02d:%02d", h, m, s)
         end
+        return string.format("%02d:%02d", m, s)
     end
-    
+
     local function GetHealth()
-        local character = LocalPlayer.Character
-        if character then
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                return math.floor(humanoid.Health)
-            end
-        end
-        return 0
+        local c = LocalPlayer.Character
+        local h = c and c:FindFirstChildOfClass("Humanoid")
+        return h and math.floor(h.Health) or 0
     end
-    
+
     local function GetVelocity()
-        local character = LocalPlayer.Character
-        if character then
-            local humanoid = character:FindFirstChildOfClass("Humanoid")
-            local rootPart = character:FindFirstChild("HumanoidRootPart")
-            
-            if rootPart then
-                local velocity = rootPart.Velocity
-                local speed = math.floor(math.sqrt(velocity.X^2 + velocity.Y^2 + velocity.Z^2))
-                return speed
-            elseif humanoid then
-                return math.floor(humanoid.WalkSpeed)
-            end
+        local c = LocalPlayer.Character
+        local hrp = c and c:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local v = hrp.Velocity
+            return math.floor((v.X^2 + v.Y^2 + v.Z^2) ^ 0.5)
         end
         return 0
     end
-    
+
     local function UpdateWatermarkText()
-        local parts = {Text}
-        
+        local parts = { Text }
+
         if Options.ShowExecutor then
-            if not Watermark.ExecutorName then
-                Watermark.ExecutorName = getexecutorname()
-            end
+            Watermark.ExecutorName = Watermark.ExecutorName or getexecutorname()
             table.insert(parts, Watermark.ExecutorName)
         end
-        
+
         if Options.ShowFPS then
-            table.insert(parts, "FPS: " .. FPS)
+            table.insert(parts, "FPS:" .. FPS)
         end
-        
-        local currentTime = tick()
-        if Options.ShowPing and (currentTime - LastPingUpdate) >= Options.PingUpdateInterval then
+
+        local now = tick()
+        if Options.ShowPing and now - LastPingUpdate >= Options.PingUpdateInterval then
             CurrentPing = CalculatePing()
-            LastPingUpdate = currentTime
+            LastPingUpdate = now
         end
-        
+
         if Options.ShowPing then
             table.insert(parts, CurrentPing .. "ms")
         end
-        
+
         if Options.ShowHealth then
-            local health = GetHealth()
-            table.insert(parts, "HP:" .. health)
+            table.insert(parts, "HP:" .. GetHealth())
         end
-        
+
         if Options.ShowVelocity then
-            local velocity = GetVelocity()
-            table.insert(parts, "V:" .. velocity)
+            table.insert(parts, "V:" .. GetVelocity())
         end
-        
+
         if Options.ShowPlayerCount then
-            local current = #Players:GetPlayers()
-            local max = Players.MaxPlayers
-            table.insert(parts, "Plr: " .. current .. "/" .. max)
+            table.insert(parts, "Plr:" .. #Players:GetPlayers() .. "/" .. Players.MaxPlayers)
         end
-        
+
         if Options.ShowSessionTime then
-            table.insert(parts, "Ses: " .. GetSessionTime())
+            table.insert(parts, "Ses:" .. GetSessionTime())
         end
-        
+
         if Options.ShowGameName then
-            local gameName = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name
-            table.insert(parts, gameName)
+            table.insert(parts, CachedGameName)
         end
-        
-        if Options.ShowPlayerName then
-            table.insert(parts, LocalPlayer.Name)
-        end
-        
-        if Options.ShowDisplayName then
-            table.insert(parts, LocalPlayer.DisplayName)
-        end
-        
+
         if Options.ShowDate then
-            local time = os.date("*t")
-            local dateStr
-            if Options.DateFormat == "m-d-Y" then
-                dateStr = time.month .. "-" .. time.day .. "-" .. time.year
-            else
-                dateStr = time.month .. "/" .. time.day .. "/" .. time.year
-            end
-            table.insert(parts, dateStr)
+            local t = os.date("*t")
+            table.insert(parts, t.month .. "-" .. t.day .. "-" .. t.year)
         end
-        
+
         if Options.ShowTime then
-            local time = os.date("*t")
-            local timeStr
-            if Options.TimeFormat == "12h" then
-                local hour = time.hour % 12
-                hour = hour == 0 and 12 or hour
-                local ampm = time.hour < 12 and "AM" or "PM"
-                timeStr = hour .. ":" .. string.format("%02d", time.min) .. " " .. ampm
-            else
-                timeStr = string.format("%02d:%02d", time.hour, time.min)
-            end
-            table.insert(parts, timeStr)
-        end
-        
-        Items["Text"].Instance.Text = table.concat(parts, " | ")
-    end
-    
-    local function UpdateGlowPosition()
-        if Items["Glow"] then
-            local watermark = Items["Watermark"].Instance
-            local glowSize = Options.GlowSize
-            
-            -- Position the glow behind the watermark with padding
-            Items["Glow"].Instance.Position = UDim2.new(
-                0, -glowSize,
-                0, -glowSize
-            )
-            
-            -- Size the glow to be larger than the watermark
-            Items["Glow"].Instance.Size = UDim2.new(
-                1, glowSize * 2,
-                1, glowSize * 2
-            )
-        end
-    end
-    
-    do
-        Items["Watermark"] = Instances:Create("Frame", {
-            Parent = Library.Holder.Instance,
-            BorderColor3 = FromRGB(0, 0, 0),
-            AnchorPoint = Vector2New(0.5, 0),
-            Name = "\0",
-            Position = UDim2New(0.5, 0, 0, 20),
-            Size = UDim2New(0, 0, 0, 25),
-            BorderSizePixel = 2,
-            AutomaticSize = Enum.AutomaticSize.X,
-            BackgroundColor3 = FromRGB(12, 12, 12)
-        })  
-        Items["Watermark"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
-
-        Items["Watermark"]:MakeDraggable()
-
-        Instances:Create("UIStroke", {
-            Parent = Items["Watermark"].Instance,
-            Color = FromRGB(68, 68, 68),
-            LineJoinMode = Enum.LineJoinMode.Miter,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-        }):AddToTheme({Color = "Border"})
-
-        -- Add glow effect around the watermark
-        if Options.GlowEnabled then
-            Items["Glow"] = Instances:Create("ImageLabel", {
-                Parent = Items["Watermark"].Instance,
-                Name = "\0",
-                Image = "rbxassetid://4996891970",
-                ScaleType = Enum.ScaleType.Slice,
-                SliceCenter = Rect.new(49, 49, 451, 451), -- Center slice for 9-slice scaling
-                BackgroundTransparency = 1,
-                ImageTransparency = Options.GlowTransparency,
-                ImageColor3 = FromRGB(31, 226, 130), -- Match accent color
-                ZIndex = -1, -- Place behind the watermark
-                BorderSizePixel = 0,
-                Size = UDim2.new(1, Options.GlowSize * 2, 1, Options.GlowSize * 2),
-                Position = UDim2.new(0, -Options.GlowSize, 0, -Options.GlowSize),
-                AnchorPoint = Vector2.new(0, 0)
-            })
-            Items["Glow"]:AddToTheme({ImageColor3 = "Accent"})
-            
-            -- Add to theme for transparency changes
-            local function updateGlowTransparency()
-                if Items["Glow"] then
-                    Items["Glow"].Instance.ImageTransparency = Options.GlowTransparency
-                end
-            end
-            
-            -- Connect to property changes
-            Items["Watermark"].Instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateGlowPosition)
-            Items["Watermark"].Instance:GetPropertyChangedSignal("AbsolutePosition"):Connect(UpdateGlowPosition)
+            local t = os.date("*t")
+            local h = t.hour % 12
+            h = h == 0 and 12 or h
+            table.insert(parts, h .. ":" .. string.format("%02d", t.min) .. (t.hour < 12 and " AM" or " PM"))
         end
 
-        Items["Text"] = Instances:Create("TextLabel", {
-            Parent = Items["Watermark"].Instance,
-            FontFace = Library.Font,
-            TextColor3 = FromRGB(180, 180, 180),
-            BorderColor3 = FromRGB(0, 0, 0),
-            Text = Text,
-            Name = "\0",
-            BackgroundTransparency = 1,
-            Size = UDim2New(0, 0, 1, 0),
-            BorderSizePixel = 0,
-            AutomaticSize = Enum.AutomaticSize.X,
-            TextSize = 12,
-            BackgroundColor3 = FromRGB(255, 255, 255)
-        })  
-        Items["Text"]:AddToTheme({TextColor3 = "Text"})
-
-        Instances:Create("UIPadding", {
-            Parent = Items["Watermark"].Instance,
-            PaddingRight = UDimNew(0, 8),
-            PaddingLeft = UDimNew(0, 8)
-        }) 
-
-        Items["Liner"] = Instances:Create("Frame", {
-            Parent = Items["Watermark"].Instance,
-            Name = "\0",
-            Position = UDim2New(0, -8, 0, 0),
-            BorderColor3 = FromRGB(0, 0, 0),
-            Size = UDim2New(1, 16, 0, 2),
-            BorderSizePixel = 0,
-            BackgroundColor3 = FromRGB(31, 226, 130)
-        })  
-        Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
-
-        Instances:Create("UIGradient", {
-            Parent = Items["Liner"].Instance,
-            Rotation = 90,
-            Color = RGBSequence{RGBSequenceKeypoint(0, FromRGB(255, 255, 255)), RGBSequenceKeypoint(1, FromRGB(94, 94, 94))}
-        }) 
-
-        if Icon then 
-            if type(Icon) == "table" then
-                Items["Icon"] = Instances:Create("ImageLabel", {
-                    Parent = Items["Watermark"].Instance,
-                    ImageColor3 = Icon[2] or FromRGB(255, 255, 255),
-                    ScaleType = Enum.ScaleType.Fit,
-                    BorderColor3 = FromRGB(0, 0, 0),
-                    Name = "\0",
-                    Image = "rbxassetid://" .. Icon[1],
-                    BackgroundTransparency = 1,
-                    Position = UDim2New(0, -3, 0, 4),
-                    Size = UDim2New(0, 18, 0, 18),
-                    BorderSizePixel = 0,
-                    BackgroundColor3 = FromRGB(255, 255, 255)
-                }) 
-
-                Items["Text"].Instance.Position = UDim2New(0, 20, 0, 0)
-            end
-        end
-        
-        if Options.ShowPing then
-            CurrentPing = CalculatePing()
-            LastPingUpdate = tick()
-        end
-        
-        if Options.ShowExecutor then
-            Watermark.ExecutorName = getexecutorname()
-        end
-        
-        -- Initial glow position update
-        if Options.GlowEnabled then
-            UpdateGlowPosition()
-        end
-        
-        UpdateConnection = RunService.Heartbeat:Connect(function()
-            UpdateWatermarkText()
-            wait(Options.UpdateInterval)
-        end)
+        Items.Text.Instance.Text = table.concat(parts, " | ")
     end
 
-    function Watermark:SetVisibility(Bool)
-        Items["Watermark"].Instance.Visible = Bool
-        if Items["Glow"] then
-            Items["Glow"].Instance.Visible = Bool and Options.GlowEnabled
-        end
-        
-        if Bool then
-            if UpdateConnection then
-                UpdateConnection:Disconnect()
-            end
-            UpdateConnection = RunService.Heartbeat:Connect(function()
-                UpdateWatermarkText()
-                wait(Options.UpdateInterval)
-            end)
-        else
-            if UpdateConnection then
-                UpdateConnection:Disconnect()
-                UpdateConnection = nil
-            end
-        end
+    Items.Watermark = Instances:Create("Frame", {
+        Parent = Library.Holder.Instance,
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 0, 20),
+        Size = UDim2.new(0, 0, 0, 25),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundColor3 = FromRGB(12, 12, 12),
+        BorderSizePixel = 2
+    })
+
+    Items.Watermark:MakeDraggable()
+
+    Instances:Create("UIStroke", {
+        Parent = Items.Watermark.Instance,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    })
+
+    Items.Glow = Instances:Create("ImageLabel", {
+        Parent = Items.Watermark.Instance,
+        Image = "rbxassetid://4996891970",
+        BackgroundTransparency = 1,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5),
+        ZIndex = Items.Watermark.Instance.ZIndex - 1,
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(20, 20, 80, 80),
+        ImageTransparency = 0.25
+    })
+
+    local function UpdateGlow()
+        local s = Items.Watermark.Instance.AbsoluteSize
+        Items.Glow.Instance.Size = UDim2.fromOffset(s.X + 18, s.Y + 18)
     end
-    
-    function Watermark:SetOptions(NewOptions)
-        local glowChanged = false
-        
-        for option, value in pairs(NewOptions) do
-            if Options[option] ~= nil then
-                Options[option] = value
-                
-                -- Handle glow-specific updates
-                if option == "GlowEnabled" then
-                    glowChanged = true
-                    if Items["Glow"] then
-                        Items["Glow"].Instance.Visible = value
-                    elseif value then
-                        -- Create glow if it doesn't exist but is being enabled
-                        Items["Glow"] = Instances:Create("ImageLabel", {
-                            Parent = Items["Watermark"].Instance,
-                            Name = "\0",
-                            Image = "rbxassetid://4996891970",
-                            ScaleType = Enum.ScaleType.Slice,
-                            SliceCenter = Rect.new(49, 49, 451, 451),
-                            BackgroundTransparency = 1,
-                            ImageTransparency = Options.GlowTransparency,
-                            ImageColor3 = FromRGB(31, 226, 130),
-                            ZIndex = -1,
-                            BorderSizePixel = 0,
-                            Size = UDim2.new(1, Options.GlowSize * 2, 1, Options.GlowSize * 2),
-                            Position = UDim2.new(0, -Options.GlowSize, 0, -Options.GlowSize),
-                            AnchorPoint = Vector2.new(0, 0)
-                        })
-                        Items["Glow"]:AddToTheme({ImageColor3 = "Accent"})
-                        UpdateGlowPosition()
-                    end
-                elseif option == "GlowTransparency" and Items["Glow"] then
-                    Items["Glow"].Instance.ImageTransparency = value
-                elseif option == "GlowSize" then
-                    glowChanged = true
-                end
-            end
-        end
-        
-        if glowChanged then
-            UpdateGlowPosition()
-        end
-        
+
+    Items.Watermark.Instance:GetPropertyChangedSignal("AbsoluteSize"):Connect(UpdateGlow)
+    UpdateGlow()
+
+    Items.Text = Instances:Create("TextLabel", {
+        Parent = Items.Watermark.Instance,
+        BackgroundTransparency = 1,
+        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.new(0, 0, 1, 0),
+        TextSize = 12,
+        TextColor3 = FromRGB(180, 180, 180),
+        FontFace = Library.Font,
+        Text = Text
+    })
+
+    Instances:Create("UIPadding", {
+        Parent = Items.Watermark.Instance,
+        PaddingLeft = UDim.new(0, 8),
+        PaddingRight = UDim.new(0, 8)
+    })
+
+    UpdateConnection = RunService.Heartbeat:Connect(function()
         UpdateWatermarkText()
-    end
-    
-    function Watermark:GetOptions()
-        local copy = {}
-        for k, v in pairs(Options) do
-            copy[k] = v
-        end
-        return copy
-    end
-    
-    function Watermark:Update()
-        UpdateWatermarkText()
-    end
-    
-    function Watermark:ResetSessionTime()
-        SessionStart = os.time()
-        UpdateWatermarkText()
-    end
-    
-    function Watermark:GetSessionTime()
-        return GetSessionTime()
-    end
-    
+        task.wait(Options.UpdateInterval)
+    end)
+
     function Watermark:Destroy()
-        if FPSConnection then
-            FPSConnection:Disconnect()
-            FPSConnection = nil
-        end
-        
-        if UpdateConnection then
-            UpdateConnection:Disconnect()
-            UpdateConnection = nil
-        end
-        
-        Items["Watermark"].Instance:Destroy()
+        if FPSConnection then FPSConnection:Disconnect() end
+        if UpdateConnection then UpdateConnection:Disconnect() end
+        Items.Watermark.Instance:Destroy()
     end
 
     return Watermark
 end
+
     Library.KeybindList = function(self)
         local KeybindList = { }
         Library.KeyList = KeybindList
