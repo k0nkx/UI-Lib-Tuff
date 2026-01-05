@@ -1066,14 +1066,15 @@ local Library do
     local UpdateConnection = nil
     local LastPingUpdate = 0
     local CurrentPing = 0
+    local SessionStart = os.time()
     
-    -- FPS counter variables
     local FPS = 0
     local Frames = 0
     local LastFPSUpdate = os.clock()
     local RunService = game:GetService("RunService")
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
     
-    -- FPS counter connection
     local FPSConnection = RunService.RenderStepped:Connect(function()
         Frames += 1
         local now = os.clock()
@@ -1084,7 +1085,10 @@ local Library do
         end
     end)
     
-    -- Default options table
+    local getexecutorname = function()
+        return identifyexecutor and identifyexecutor() or "Unknown"
+    end
+    
     local Options = {
         ShowPing = true,
         ShowPlayerCount = true,
@@ -1094,13 +1098,16 @@ local Library do
         ShowGameName = true,
         ShowPlayerName = false,
         ShowDisplayName = false,
-        UpdateInterval = 1, -- Update every 1 second
-        PingUpdateInterval = 5, -- Update ping every 5 seconds
-        DateFormat = "m-d-Y", -- Month-Day-Year (12-25-2026)
-        TimeFormat = "12h" -- 12-hour format
+        ShowExecutor = true,
+        ShowSessionTime = true,
+        ShowHealth = true,
+        ShowVelocity = true,
+        UpdateInterval = 0.1,
+        PingUpdateInterval = 5,
+        DateFormat = "m-d-Y",
+        TimeFormat = "12h"
     }
     
-    -- Function to calculate ping (more stable)
     local function CalculatePing()
         local stats = game:GetService("Stats")
         local network = stats.Network
@@ -1113,15 +1120,61 @@ local Library do
         return 0
     end
     
-    -- Function to update the watermark text
+    local function GetSessionTime()
+        local elapsed = os.time() - SessionStart
+        local hours = math.floor(elapsed / 3600)
+        local minutes = math.floor((elapsed % 3600) / 60)
+        local seconds = elapsed % 60
+        
+        if hours > 0 then
+            return string.format("%d:%02d:%02d", hours, minutes, seconds)
+        else
+            return string.format("%02d:%02d", minutes, seconds)
+        end
+    end
+    
+    local function GetHealth()
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                return math.floor(humanoid.Health)
+            end
+        end
+        return 0
+    end
+    
+    local function GetVelocity()
+        local character = LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            
+            if rootPart then
+                local velocity = rootPart.Velocity
+                local speed = math.floor(math.sqrt(velocity.X^2 + velocity.Y^2 + velocity.Z^2))
+                return speed
+            elseif humanoid then
+                return math.floor(humanoid.WalkSpeed)
+            end
+        end
+        return 0
+    end
+    
     local function UpdateWatermarkText()
-        local parts = {Text} -- Use the original Text from constructor
+        local parts = {Text}
+        
+        if Options.ShowExecutor then
+            if not Watermark.ExecutorName then
+                Watermark.ExecutorName = getexecutorname()
+            end
+            table.insert(parts, Watermark.ExecutorName)
+        end
         
         if Options.ShowFPS then
             table.insert(parts, "FPS: " .. FPS)
         end
         
-        -- Update ping less frequently to avoid flickering
         local currentTime = tick()
         if Options.ShowPing and (currentTime - LastPingUpdate) >= Options.PingUpdateInterval then
             CurrentPing = CalculatePing()
@@ -1132,11 +1185,24 @@ local Library do
             table.insert(parts, CurrentPing .. "ms")
         end
         
+        if Options.ShowHealth then
+            local health = GetHealth()
+            table.insert(parts, "HP:" .. health)
+        end
+        
+        if Options.ShowVelocity then
+            local velocity = GetVelocity()
+            table.insert(parts, "V:" .. velocity)
+        end
+        
         if Options.ShowPlayerCount then
-            local players = game:GetService("Players")
-            local current = #players:GetPlayers()
-            local max = players.MaxPlayers
+            local current = #Players:GetPlayers()
+            local max = Players.MaxPlayers
             table.insert(parts, "Plr: " .. current .. "/" .. max)
+        end
+        
+        if Options.ShowSessionTime then
+            table.insert(parts, "Ses: " .. GetSessionTime())
         end
         
         if Options.ShowGameName then
@@ -1145,17 +1211,11 @@ local Library do
         end
         
         if Options.ShowPlayerName then
-            local player = game:GetService("Players").LocalPlayer
-            if player then
-                table.insert(parts, player.Name)
-            end
+            table.insert(parts, LocalPlayer.Name)
         end
         
         if Options.ShowDisplayName then
-            local player = game:GetService("Players").LocalPlayer
-            if player then
-                table.insert(parts, player.DisplayName)
-            end
+            table.insert(parts, LocalPlayer.DisplayName)
         end
         
         if Options.ShowDate then
@@ -1197,7 +1257,8 @@ local Library do
             BorderSizePixel = 2,
             AutomaticSize = Enum.AutomaticSize.X,
             BackgroundColor3 = FromRGB(12, 12, 12)
-        })  Items["Watermark"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
+        })  
+        Items["Watermark"]:AddToTheme({BackgroundColor3 = "Inline", BorderColor3 = "Outline"})
 
         Items["Watermark"]:MakeDraggable()
 
@@ -1221,7 +1282,8 @@ local Library do
             AutomaticSize = Enum.AutomaticSize.X,
             TextSize = 12,
             BackgroundColor3 = FromRGB(255, 255, 255)
-        })  Items["Text"]:AddToTheme({TextColor3 = "Text"})
+        })  
+        Items["Text"]:AddToTheme({TextColor3 = "Text"})
 
         Instances:Create("UIPadding", {
             Parent = Items["Watermark"].Instance,
@@ -1237,7 +1299,8 @@ local Library do
             Size = UDim2New(1, 16, 0, 2),
             BorderSizePixel = 0,
             BackgroundColor3 = FromRGB(31, 226, 130)
-        })  Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
+        })  
+        Items["Liner"]:AddToTheme({BackgroundColor3 = "Accent"})
 
         Instances:Create("UIGradient", {
             Parent = Items["Liner"].Instance,
@@ -1265,13 +1328,15 @@ local Library do
             end
         end
         
-        -- Initialize ping
         if Options.ShowPing then
             CurrentPing = CalculatePing()
             LastPingUpdate = tick()
         end
         
-        -- Start updating the watermark text
+        if Options.ShowExecutor then
+            Watermark.ExecutorName = getexecutorname()
+        end
+        
         UpdateConnection = RunService.Heartbeat:Connect(function()
             UpdateWatermarkText()
             wait(Options.UpdateInterval)
@@ -1317,20 +1382,26 @@ local Library do
         UpdateWatermarkText()
     end
     
+    function Watermark:ResetSessionTime()
+        SessionStart = os.time()
+        UpdateWatermarkText()
+    end
+    
+    function Watermark:GetSessionTime()
+        return GetSessionTime()
+    end
+    
     function Watermark:Destroy()
-        -- Clean up FPS counter
         if FPSConnection then
             FPSConnection:Disconnect()
             FPSConnection = nil
         end
         
-        -- Clean up update connection
         if UpdateConnection then
             UpdateConnection:Disconnect()
             UpdateConnection = nil
         end
         
-        -- Destroy the UI
         Items["Watermark"].Instance:Destroy()
     end
 
