@@ -200,10 +200,10 @@ local Library do
         },
 
         Images = { -- you're welcome to reupload the images and replace it with your own links
-            ["Saturation"] = {"Saturation.png", "https://github.com/sametexe001/images/blob/main/saturation.png?raw=true" },
-            ["Value"] = { "Value.png", "https://github.com/sametexe001/images/blob/main/value.png?raw=true" },
-            ["Hue"] = { "Hue.png", "https://github.com/sametexe001/images/blob/main/horizontalhue.png?raw=true" },
-            ["Checkers"] = { "Checkers.png", "https://github.com/sametexe001/images/blob/main/checkers.png?raw=true" },
+            ["Saturation"] = {"Saturation.png", "https://raw.githubusercontent.com/k0nkx/UI-Lib-Tuff/refs/heads/main/saturation.png" },
+            ["Value"] = { "Value.png", "https://github.com/k0nkx/UI-Lib-Tuff/blob/main/value.png?raw=true" },
+            ["Hue"] = { "Hue.png", "https://github.com/k0nkx/UI-Lib-Tuff/blob/main/hue.png?raw=true" },
+            ["Checkers"] = { "Checkers.png", "https://github.com/k0nkx/UI-Lib-Tuff/blob/main/checkers.png?raw=true" },
         },
 
         -- Ignore below
