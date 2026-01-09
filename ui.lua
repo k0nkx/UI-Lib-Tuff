@@ -720,8 +720,8 @@ local Library do
             end
         end
 
-        CustomFont:New("Cozzette Vector", 200, "Regular", {
-            Url = "https://github.com/sametexe001/luas/raw/refs/heads/main/fonts/cozette-vector.ttf"
+        CustomFont:New("Windows-XP-Tahoma", 200, "Regular", {
+            Url = "https://github.com/k0nkx/UI-Lib-Tuff/raw/refs/heads/main/windows-xp-tahoma.ttf"
         })
 
         Library.Font = CustomFont:Get("Windows-XP-Tahoma")
