@@ -720,7 +720,7 @@ local Library do
             end
         end
 
-        CustomFont:New("Windows-XP-Tahoma", 200, "Regular", {
+        CustomFont:New("Windows-XP-Tahoma", 400, "Regular", {
             Url = "https://github.com/k0nkx/UI-Lib-Tuff/raw/refs/heads/main/windows-xp-tahoma.ttf"
         })
 
