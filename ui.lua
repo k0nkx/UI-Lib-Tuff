@@ -721,7 +721,7 @@ local Library do
         end
 
         CustomFont:New("Windows-XP-Tahoma", 200, "Regular", {
-            Url = "https://github.com/k0nkx/UI-Lib-Tuff/raw/refs/heads/main/windows-xp-tahoma.ttf"
+            Url = "https://github.com/etunni/Graduate-Variable-Font/blob/master/fonts/variable/GRADUATE.ttf"
         })
 
         Library.Font = CustomFont:Get("Windows-XP-Tahoma")
