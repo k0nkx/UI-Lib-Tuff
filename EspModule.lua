@@ -1,13 +1,44 @@
--- ESP Module/Handler
-local ESP = {}
+local ESPModule = {}
 
--- Main ESP Class
-local ESPClass = {}
-ESPClass.__index = ESPClass
+-- Cleanup any existing ESP
+do
+    if ESP and ESP.Destroy then
+        ESP:Destroy()
+    end
+    ESP = nil
+    
+    local CoreGui = game:GetService("CoreGui")
+    local folder = CoreGui:FindFirstChild("Folder")
+    if folder then
+        for _, gui in ipairs(folder:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui.Name:find("ESP_") then
+                gui:Destroy()
+            end
+        end
+    end
+end
 
--- Default settings (all off by default)
-ESPClass.Settings = {
-    Enabled = false,
+-- Services
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+
+-- Clean up any existing ESP instance
+if _G.ESPInstance and _G.ESPInstance.Destroy then
+    _G.ESPInstance:Destroy()
+end
+
+-- Create ESP class
+ESP = {}
+ESP.__index = ESP
+
+-- Default settings with everything OFF
+ESP.Settings = {
+    Enabled = false, -- Start with ESP disabled
     Keybind = Enum.KeyCode.End,
     TestingMode = false,
     TeamCheck = false,
@@ -81,7 +112,7 @@ ESPClass.Settings = {
         OutlineTransparency = 0,
         MaxArmor = 130,
         UseGradient = false,
-        ShowOnValue = false,
+        ShowOnValue = true,
         Gradient = {
             Colors = ColorSequence.new({
                 ColorSequenceKeypoint.new(0, Color3.new(0.9, 0.9, 1)),
@@ -103,7 +134,7 @@ ESPClass.Settings = {
         StaticColor = Color3.fromRGB(200, 220, 255),
         UseDynamicColor = false,
         Transparency = 0,
-        ShowOutline = false,
+        ShowOutline = true,
         OutlineColor = Color3.new(0, 0, 0),
         OutlineTransparency = 0,
     },
@@ -116,7 +147,7 @@ ESPClass.Settings = {
         StaticColor = Color3.fromRGB(255, 255, 255),
         UseDynamicColor = false,
         Transparency = 0,
-        ShowOutline = false,
+        ShowOutline = true,
         OutlineColor = Color3.new(0, 0, 0),
         OutlineTransparency = 0,
         FollowBar = false,
@@ -129,7 +160,7 @@ ESPClass.Settings = {
         Color = Color3.new(1, 1, 1),
         StaticColor = Color3.fromRGB(255, 255, 255),
         Transparency = 0,
-        ShowOutline = false,
+        ShowOutline = true,
         OutlineColor = Color3.new(0, 0, 0),
         OutlineTransparency = 0,
     },
@@ -142,7 +173,7 @@ ESPClass.Settings = {
         Transparency = 0,
         UseDisplayName = true,
         Offset = Vector2.new(0, -18),
-        ShowOutline = false,
+        ShowOutline = true,
         OutlineColor = Color3.new(0, 0, 0),
         OutlineTransparency = 0,
     },
@@ -154,7 +185,7 @@ ESPClass.Settings = {
         Color = Color3.new(1, 1, 1),
         Transparency = 1,
         Offset = Vector2.new(0, 5),
-        ShowOutline = false,
+        ShowOutline = true,
         OutlineColor = Color3.new(0, 0, 0),
         OutlineTransparency = 0,
     },
@@ -166,7 +197,7 @@ ESPClass.Settings = {
         OutlineColor = Color3.new(1, 1, 1),
         OutlineTransparency = 0.9,
         TeamColor = false,
-        UseBoxColor = false,
+        UseBoxColor = true,
     },
     
     Character = {
@@ -175,27 +206,21 @@ ESPClass.Settings = {
     },
 }
 
--- Constructor
-function ESP.new()
-    local self = setmetatable({}, ESPClass)
-    
-    self.Players = {}
-    self.Connections = {}
-    self.HealthStates = {}
-    self.Highlights = {}
-    self.Gui = nil
-    self.Running = false
-    self.LoopConnection = nil
-    self.UpdateRate = 0
-    self.LastUpdate = 0
-    self.LastPositions = {}
-    self.GradientSpinStartTime = 0
-    
-    return self
-end
+-- ESP Instance Variables
+ESP.Players = {}
+ESP.Connections = {}
+ESP.HealthStates = {}
+ESP.Highlights = {}
+ESP.Gui = nil
+ESP.Running = false
+ESP.LoopConnection = nil
+ESP.UpdateRate = 0
+ESP.LastUpdate = 0
+ESP.LastPositions = {}
+ESP.GradientSpinStartTime = 0
 
 -- Helper Functions
-function ESPClass:GetHealthColor(percent)
+function ESP:GetHealthColor(percent)
     percent = math.clamp(percent, 0, 1)
     if percent < 0.5 then
         return Color3.new(1, 0, 0):Lerp(Color3.new(1, 1, 0), percent * 2)
@@ -204,12 +229,12 @@ function ESPClass:GetHealthColor(percent)
     end
 end
 
-function ESPClass:GetArmorColor(percent)
+function ESP:GetArmorColor(percent)
     percent = math.clamp(percent, 0, 1)
     return self.Settings.ArmorBar.Color:Lerp(Color3.new(0, 1, 1), percent)
 end
 
-function ESPClass:CreateGui()
+function ESP:CreateGui()
     if self.Gui and self.Gui.Parent then
         self.Gui:Destroy()
     end
@@ -219,15 +244,15 @@ function ESPClass:CreateGui()
     self.Gui.DisplayOrder = 9e9
     self.Gui.ResetOnSpawn = false
     
-    local folder = game:GetService("CoreGui"):FindFirstChild("Folder")
+    local folder = CoreGui:FindFirstChild("Folder")
     if folder then
         self.Gui.Parent = folder
     else
-        self.Gui.Parent = gethui and gethui() or game:GetService("CoreGui")
+        self.Gui.Parent = gethui and gethui() or CoreGui
     end
 end
 
-function ESPClass:CreateHighlight(player)
+function ESP:CreateHighlight(player)
     if not self.Settings.Highlight.Enabled then return nil end
     
     local highlight = Instance.new("Highlight")
@@ -252,11 +277,11 @@ function ESPClass:CreateHighlight(player)
     return highlight
 end
 
-function ESPClass:UpdateHighlight(player, highlight)
+function ESP:UpdateHighlight(player, highlight)
     if not highlight or not self.Settings.Highlight.Enabled then return end
     
     local char = player.Character
-    if char and char:IsDescendantOf(game:GetService("Workspace")) then
+    if char and char:IsDescendantOf(Workspace) then
         if highlight.Adornee ~= char then
             highlight.Adornee = char
         end
@@ -269,6 +294,7 @@ function ESPClass:UpdateHighlight(player, highlight)
             highlight.Enabled = true
         end
         
+        -- Update highlight colors
         local teamColor = player.Team and player.Team.TeamColor.Color or self.Settings.Highlight.FillColor
         
         if self.Settings.Highlight.TeamColor then
@@ -291,7 +317,7 @@ function ESPClass:UpdateHighlight(player, highlight)
     end
 end
 
-function ESPClass:CleanupPlayer(player)
+function ESP:CleanupPlayer(player)
     if self.Players[player] then
         for _, obj in pairs(self.Players[player]) do
             if typeof(obj) == "Instance" then
@@ -310,7 +336,15 @@ function ESPClass:CleanupPlayer(player)
     self.LastPositions[player] = nil
 end
 
-function ESPClass:CreateBox(player)
+local PopInInfo = TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+function ESP:AnimatePopIn(label)
+    if not self.Running then return end
+    label.TextSize = 1
+    label.TextTransparency = 1
+    TweenService:Create(label, PopInInfo, {TextSize = label.TextSize, TextTransparency = 0}):Play()
+end
+
+function ESP:CreateBox(player)
     local box = {}
     
     local teamColor = player.Team and player.Team.TeamColor.Color or self.Settings.Box.Color
@@ -347,6 +381,7 @@ function ESPClass:CreateBox(player)
         box[names[i]] = frame
     end
     
+    -- Health Bar
     if self.Settings.HealthBar.Enabled then
         local healthBg = Instance.new("Frame")
         healthBg.Name = "HealthBg"
@@ -384,6 +419,7 @@ function ESPClass:CreateBox(player)
         box.HealthMask = healthMask
     end
     
+    -- Armor Bar
     if self.Settings.ArmorBar.Enabled then
         local armorBg = Instance.new("Frame")
         armorBg.Name = "ArmorBg"
@@ -428,6 +464,7 @@ function ESPClass:CreateBox(player)
         box.ArmorMask = armorMask
     end
     
+    -- Name Tag
     if self.Settings.NameTag.Enabled then
         local nameLabel = Instance.new("TextLabel")
         nameLabel.Name = "NameLabel"
@@ -444,6 +481,7 @@ function ESPClass:CreateBox(player)
         box.NameLabel = nameLabel
     end
     
+    -- Health Text
     if self.Settings.HealthText.Enabled then
         local healthText = Instance.new("TextLabel")
         healthText.Name = "HealthText"
@@ -461,6 +499,7 @@ function ESPClass:CreateBox(player)
         box.HealthText = healthText
     end
     
+    -- Armor Text
     if self.Settings.ArmorText.Enabled then
         local armorText = Instance.new("TextLabel")
         armorText.Name = "ArmorText"
@@ -478,6 +517,7 @@ function ESPClass:CreateBox(player)
         box.ArmorText = armorText
     end
     
+    -- Velocity Flag
     if self.Settings.VelocityFlag.Enabled then
         local velocityFlag = Instance.new("TextLabel")
         velocityFlag.Name = "VelocityFlag"
@@ -495,6 +535,7 @@ function ESPClass:CreateBox(player)
         box.VelocityFlag = velocityFlag
     end
     
+    -- Distance
     if self.Settings.Distance.Enabled then
         local distanceLabel = Instance.new("TextLabel")
         distanceLabel.Name = "DistanceLabel"
@@ -518,7 +559,7 @@ function ESPClass:CreateBox(player)
     return box
 end
 
-function ESPClass:GetBoxGradientColors(player)
+function ESP:GetBoxGradientColors(player)
     if not self.Settings.Box.BoxGradient then
         return nil
     end
@@ -548,7 +589,7 @@ function ESPClass:GetBoxGradientColors(player)
     end
 end
 
-function ESPClass:CalculateGradientSpinRotation()
+function ESP:CalculateGradientSpinRotation()
     if not self.Settings.Box.BoxGradient or not self.Settings.Box.BoxGradientSpin then
         return self.Settings.Box.Gradient.Rotation
     end
@@ -564,7 +605,41 @@ function ESPClass:CalculateGradientSpinRotation()
     return rotation
 end
 
-function ESPClass:GetCharacterCenter(char)
+function ESP:SetBoxVisible(box, visible)
+    if not box then return end
+    
+    if self.Settings.Box.Enabled then
+        if box.Outer then box.Outer.Visible = visible end
+        if box.Main then box.Main.Visible = visible end
+        if box.Inner then box.Inner.Visible = visible end
+    end
+    
+    if self.Settings.HealthBar.Enabled and box.HealthBg then
+        box.HealthBg.Visible = visible
+    end
+    
+    if self.Settings.ArmorBar.Enabled and box.ArmorBg then
+        box.ArmorBg.Visible = visible
+    end
+    
+    if self.Settings.NameTag.Enabled and box.NameLabel then
+        box.NameLabel.Visible = visible
+    end
+    
+    if self.Settings.HealthText.Enabled and box.HealthText then
+        box.HealthText.Visible = visible
+    end
+    
+    if self.Settings.ArmorText.Enabled and box.ArmorText then
+        box.ArmorText.Visible = visible
+    end
+    
+    if self.Settings.VelocityFlag.Enabled and box.VelocityFlag then
+        box.VelocityFlag.Visible = visible
+    end
+end
+
+function ESP:GetCharacterCenter(char)
     if not char then return nil end
     
     local parts = {}
@@ -588,7 +663,7 @@ function ESPClass:GetCharacterCenter(char)
     return Vector3.new(totalX / #parts, totalY / #parts, totalZ / #parts)
 end
 
-function ESPClass:GetCharacterBoundingBox(char)
+function ESP:GetCharacterBoundingBox(char)
     if not char then return nil end
     
     local parts = {}
@@ -671,9 +746,9 @@ function ESPClass:GetCharacterBoundingBox(char)
     return CFrame.new(center), size
 end
 
-function ESPClass:GetPlayerArmor(player)
+function ESP:GetPlayerArmor(player)
     local success, armorValue = pcall(function()
-        local playerFolder = game:GetService("Workspace"):FindFirstChild("Players")
+        local playerFolder = Workspace:FindFirstChild("Players")
         if not playerFolder then return 0 end
         
         local playerModel = playerFolder:FindFirstChild(player.Name)
@@ -699,7 +774,7 @@ function ESPClass:GetPlayerArmor(player)
     return 0
 end
 
-function ESPClass:CalculateVelocity(player, charCenter)
+function ESP:CalculateVelocity(player, charCenter)
     local now = tick()
     local lastPosition = self.LastPositions[player]
     
@@ -730,7 +805,7 @@ function ESPClass:CalculateVelocity(player, charCenter)
     return velocityInt
 end
 
-function ESPClass:ShouldShowArmorBar(player)
+function ESP:ShouldShowArmorBar(player)
     if not self.Settings.ArmorBar.Enabled then
         return false
     end
@@ -740,7 +815,7 @@ function ESPClass:ShouldShowArmorBar(player)
     end
     
     local armorValue = 0
-    if self.Settings.TestingMode and player == game:GetService("Players").LocalPlayer then
+    if self.Settings.TestingMode and player == LocalPlayer then
         armorValue = math.floor(math.abs(math.sin(tick() * 0.5)) * self.Settings.ArmorBar.MaxArmor)
     else
         armorValue = self:GetPlayerArmor(player)
@@ -749,12 +824,13 @@ function ESPClass:ShouldShowArmorBar(player)
     return armorValue > 0
 end
 
-function ESPClass:Update()
+function ESP:Update()
     if not self.Running or not self.Settings.Enabled then
         if self.Gui then
             self.Gui.Enabled = false
         end
         
+        -- Disable all highlights when ESP is disabled
         for player, highlight in pairs(self.Highlights) do
             if highlight then
                 highlight.Enabled = false
@@ -772,11 +848,6 @@ function ESPClass:Update()
     if self.Gui then
         self.Gui.Enabled = true
     end
-    
-    local Players = game:GetService("Players")
-    local Workspace = game:GetService("Workspace")
-    local Camera = Workspace.CurrentCamera
-    local LocalPlayer = Players.LocalPlayer
     
     local localChar = LocalPlayer.Character
     local localTeam = LocalPlayer.Team
@@ -831,6 +902,7 @@ function ESPClass:Update()
         local box = self.Players[player]
         local highlight = self.Highlights[player]
         
+        -- Update highlight if enabled
         if self.Settings.Highlight.Enabled then
             if not highlight then
                 highlight = self:CreateHighlight(player)
@@ -881,6 +953,9 @@ function ESPClass:Update()
             if not box then
                 box = self:CreateBox(player)
                 self.Players[player] = box
+                if self.Settings.Distance.Enabled and box.DistanceLabel then
+                    self:AnimatePopIn(box.DistanceLabel)
+                end
             end
             
             left = math.floor(left)
@@ -899,6 +974,7 @@ function ESPClass:Update()
             local boxTopY = top - 1
             local totalBoxHeight = height + 2
             
+            -- Update box visibility based on settings
             if self.Settings.Box.Enabled and box.Main then
                 if box.Outer then
                     box.Outer.Position = UDim2.new(0, left - 1, 0, boxTopY)
@@ -943,6 +1019,10 @@ function ESPClass:Update()
                 if box.Main and box.Main:FindFirstChild("UIStroke") then
                     box.Main.UIStroke.Thickness = self.Settings.Box.Thickness
                 end
+            else
+                if box.Outer then box.Outer.Visible = false end
+                if box.Main then box.Main.Visible = false end
+                if box.Inner then box.Inner.Visible = false end
             end
             
             local healthPercent, healthValue
@@ -999,26 +1079,7 @@ function ESPClass:Update()
                 totalBarWidth = totalBarWidth + self.Settings.HealthBar.Width + self.Settings.HealthBar.Offset
             end
             
-            if shouldShowArmorBar and box.ArmorBg then
-                armorBarX = left - totalBarWidth
-                box.ArmorBg.Position = UDim2.new(0, armorBarX, 0, boxTopY)
-                box.ArmorBg.Size = UDim2.new(0, self.Settings.ArmorBar.Width, 0, totalBoxHeight)
-                box.ArmorBg.Visible = true
-                
-                local armorFillHeight = totalBoxHeight * box.VisualArmor
-                box.ArmorFill.Position = UDim2.new(0, 0, 0, totalBoxHeight - armorFillHeight)
-                box.ArmorFill.Size = UDim2.new(1, 0, 0, armorFillHeight)
-                
-                local armorMaskHeight = totalBoxHeight * (1 - box.VisualArmor)
-                box.ArmorMask.Size = UDim2.new(1, 0, 0, armorMaskHeight)
-                
-                if not self.Settings.ArmorBar.UseGradient then
-                    box.ArmorFill.BackgroundColor3 = self:GetArmorColor(box.VisualArmor)
-                end
-            elseif box.ArmorBg then
-                box.ArmorBg.Visible = false
-            end
-            
+            -- Health Bar
             if self.Settings.HealthBar.Enabled and box.HealthBg then
                 if shouldShowArmorBar then
                     healthBarX = left - (self.Settings.HealthBar.Width + self.Settings.HealthBar.Offset)
@@ -1039,8 +1100,32 @@ function ESPClass:Update()
                 elseif not self.Settings.HealthBar.UseGradient then
                     box.HealthBg.BackgroundColor3 = self.Settings.HealthBar.Background
                 end
+            elseif box.HealthBg then
+                box.HealthBg.Visible = false
             end
             
+            -- Armor Bar
+            if shouldShowArmorBar and box.ArmorBg then
+                armorBarX = left - totalBarWidth
+                box.ArmorBg.Position = UDim2.new(0, armorBarX, 0, boxTopY)
+                box.ArmorBg.Size = UDim2.new(0, self.Settings.ArmorBar.Width, 0, totalBoxHeight)
+                box.ArmorBg.Visible = true
+                
+                local armorFillHeight = totalBoxHeight * box.VisualArmor
+                box.ArmorFill.Position = UDim2.new(0, 0, 0, totalBoxHeight - armorFillHeight)
+                box.ArmorFill.Size = UDim2.new(1, 0, 0, armorFillHeight)
+                
+                local armorMaskHeight = totalBoxHeight * (1 - box.VisualArmor)
+                box.ArmorMask.Size = UDim2.new(1, 0, 0, armorMaskHeight)
+                
+                if not self.Settings.ArmorBar.UseGradient then
+                    box.ArmorFill.BackgroundColor3 = self:GetArmorColor(box.VisualArmor)
+                end
+            elseif box.ArmorBg then
+                box.ArmorBg.Visible = false
+            end
+            
+            -- Name Tag
             if self.Settings.NameTag.Enabled and box.NameLabel then
                 if self.Settings.TestingMode and player == LocalPlayer then
                     box.NameLabel.Text = "[TEST] " .. (self.Settings.NameTag.UseDisplayName and player.DisplayName or player.Name)
@@ -1052,8 +1137,11 @@ function ESPClass:Update()
                 box.NameLabel.TextColor3 = self.Settings.NameTag.Color
                 box.NameLabel.TextSize = self.Settings.NameTag.Size
                 box.NameLabel.Visible = true
+            elseif box.NameLabel then
+                box.NameLabel.Visible = false
             end
             
+            -- Health Text
             if self.Settings.HealthText.Enabled and box.HealthText then
                 if self.Settings.TestingMode and player == LocalPlayer then
                     box.HealthText.Text = tostring(healthValue) .. "%"
@@ -1087,8 +1175,11 @@ function ESPClass:Update()
                 box.HealthText.Size = UDim2.new(0, 18, 0, self.Settings.HealthText.Size + 4)
                 box.HealthText.TextSize = self.Settings.HealthText.Size
                 box.HealthText.Visible = true
+            elseif box.HealthText then
+                box.HealthText.Visible = false
             end
             
+            -- Armor Text
             if self.Settings.ArmorText.Enabled and box.ArmorText and shouldShowArmorBar then
                 box.ArmorText.Text = tostring(armorValue)
                 
@@ -1126,6 +1217,7 @@ function ESPClass:Update()
                 box.ArmorText.Visible = false
             end
             
+            -- Velocity Flag
             if self.Settings.VelocityFlag.Enabled and box.VelocityFlag then
                 local velocity = self:CalculateVelocity(player, charCenter)
                 box.VelocityFlag.Text = "V:" .. tostring(velocity)
@@ -1146,8 +1238,11 @@ function ESPClass:Update()
                 box.VelocityFlag.Size = UDim2.new(0, 30, 0, self.Settings.VelocityFlag.Size + 4)
                 box.VelocityFlag.TextSize = self.Settings.VelocityFlag.Size
                 box.VelocityFlag.Visible = true
+            elseif box.VelocityFlag then
+                box.VelocityFlag.Visible = false
             end
             
+            -- Distance
             if self.Settings.Distance.Enabled and box.DistanceLabel then
                 local firstLabelY = bottom + self.Settings.Distance.Offset.Y - 5
                 box.DistanceLabel.Position = UDim2.new(0, left - 1, 0, firstLabelY)
@@ -1162,45 +1257,16 @@ function ESPClass:Update()
                 else
                     box.DistanceLabel.Visible = false
                 end
+            elseif box.DistanceLabel then
+                box.DistanceLabel.Visible = false
             end
             
         else
             if box then
-                if self.Settings.Box.Enabled then
-                    if box.Outer then box.Outer.Visible = false end
-                    if box.Main then box.Main.Visible = false end
-                    if box.Inner then box.Inner.Visible = false end
-                end
-                
-                if self.Settings.HealthBar.Enabled and box.HealthBg then
-                    box.HealthBg.Visible = false
-                end
-                
-                if self.Settings.ArmorBar.Enabled and box.ArmorBg then
-                    box.ArmorBg.Visible = false
-                end
-                
-                if self.Settings.NameTag.Enabled and box.NameLabel then
-                    box.NameLabel.Visible = false
-                end
-                
-                if self.Settings.HealthText.Enabled and box.HealthText then
-                    box.HealthText.Visible = false
-                end
-                
-                if self.Settings.ArmorText.Enabled and box.ArmorText then
-                    box.ArmorText.Visible = false
-                end
-                
-                if self.Settings.VelocityFlag.Enabled and box.VelocityFlag then
-                    box.VelocityFlag.Visible = false
-                end
-                
-                if self.Settings.Distance.Enabled and box.DistanceLabel then
-                    box.DistanceLabel.Visible = false
-                end
+                self:SetBoxVisible(box, false)
             end
             
+            -- Disable highlight when not on screen
             if highlight then
                 highlight.Enabled = false
             end
@@ -1208,7 +1274,7 @@ function ESPClass:Update()
     end
 end
 
-function ESPClass:Start()
+function ESP:Start()
     if self.Running then 
         self:Stop()
         task.wait(0.1)
@@ -1219,8 +1285,6 @@ function ESPClass:Start()
     
     self.GradientSpinStartTime = tick()
     
-    local Players = game:GetService("Players")
-    
     self.Connections.PlayerRemoving = Players.PlayerRemoving:Connect(function(player)
         self:CleanupPlayer(player)
     end)
@@ -1229,12 +1293,12 @@ function ESPClass:Start()
         self.LoopConnection:Disconnect()
     end
     
-    self.LoopConnection = game:GetService("RunService").RenderStepped:Connect(function()
+    self.LoopConnection = RunService.RenderStepped:Connect(function()
         self:Update()
     end)
 end
 
-function ESPClass:Stop()
+function ESP:Stop()
     self.Running = false
     
     for key, connection in pairs(self.Connections) do
@@ -1256,6 +1320,7 @@ function ESPClass:Stop()
     self.HealthStates = {}
     self.LastPositions = {}
     
+    -- Clean up all highlights
     for player, highlight in pairs(self.Highlights) do
         if highlight then
             highlight:Destroy()
@@ -1269,21 +1334,22 @@ function ESPClass:Stop()
     end
 end
 
-function ESPClass:UpdateSettings(newSettings)
-    for key, value in pairs(newSettings) do
-        if self.Settings[key] ~= nil then
-            if typeof(value) == "table" then
-                for subKey, subValue in pairs(value) do
-                    if self.Settings[key][subKey] ~= nil then
-                        self.Settings[key][subKey] = subValue
-                    end
-                end
-            else
-                self.Settings[key] = value
-            end
+-- Deep merge function for updating settings
+local function deepMerge(t1, t2)
+    for k, v in pairs(t2) do
+        if type(v) == "table" and type(t1[k]) == "table" then
+            deepMerge(t1[k], v)
+        else
+            t1[k] = v
         end
     end
+    return t1
+end
+
+function ESP:UpdateSettings(newSettings)
+    deepMerge(self.Settings, newSettings)
     
+    -- Update all highlights with new settings
     for player, highlight in pairs(self.Highlights) do
         if highlight then
             local teamColor = player.Team and player.Team.TeamColor.Color or self.Settings.Highlight.FillColor
@@ -1305,12 +1371,13 @@ function ESPClass:UpdateSettings(newSettings)
         end
     end
     
+    -- Recreate all boxes to apply new settings
     for player, box in pairs(self.Players) do
         self:CleanupPlayer(player)
     end
 end
 
-function ESPClass:Toggle(state)
+function ESP:Toggle(state)
     if state == nil then
         self.Settings.Enabled = not self.Settings.Enabled
     else
@@ -1318,10 +1385,9 @@ function ESPClass:Toggle(state)
     end
 end
 
-function ESPClass:Destroy()
+function ESP:Destroy()
     self:Stop()
     
-    local CoreGui = game:GetService("CoreGui")
     local folder = CoreGui:FindFirstChild("Folder")
     if folder then
         for _, gui in ipairs(folder:GetChildren()) do
@@ -1331,13 +1397,218 @@ function ESPClass:Destroy()
         end
     end
     
+    if _G.ESPInstance == self then
+        _G.ESPInstance = nil
+    end
+    
     for k in pairs(self) do
         self[k] = nil
     end
     setmetatable(self, nil)
 end
 
--- Module Interface
-ESP.new = ESP.new
+-- Initialize ESP
+_G.ESPInstance = ESP
+ESP:Start()
 
-return ESP
+-- Module Interface
+ESPModule = {
+    Toggle = function(state) 
+        ESP:Toggle(state) 
+    end,
+    
+    UpdateSettings = function(settings) 
+        ESP:UpdateSettings(settings) 
+    end,
+    
+    Stop = function() 
+        ESP:Stop() 
+    end,
+    
+    Start = function() 
+        ESP:Start() 
+    end,
+    
+    Destroy = function() 
+        ESP:Destroy() 
+    end,
+    
+    Settings = ESP.Settings,
+    
+    -- Helper functions for common operations
+    EnableAll = function()
+        local settings = {
+            Enabled = true,
+            Box = {Enabled = true},
+            Outline = {Enabled = true},
+            HealthBar = {Enabled = true},
+            ArmorBar = {Enabled = true},
+            HealthText = {Enabled = true},
+            ArmorText = {Enabled = true},
+            NameTag = {Enabled = true},
+            Distance = {Enabled = true},
+            Highlight = {Enabled = true},
+            VelocityFlag = {Enabled = true}
+        }
+        ESP:UpdateSettings(settings)
+    end,
+    
+    DisableAll = function()
+        local settings = {
+            Enabled = false,
+            Box = {Enabled = false},
+            Outline = {Enabled = false},
+            HealthBar = {Enabled = false},
+            ArmorBar = {Enabled = false},
+            HealthText = {Enabled = false},
+            ArmorText = {Enabled = false},
+            NameTag = {Enabled = false},
+            Distance = {Enabled = false},
+            Highlight = {Enabled = false},
+            VelocityFlag = {Enabled = false}
+        }
+        ESP:UpdateSettings(settings)
+    end,
+    
+    -- Color setting helpers
+    SetBoxColor = function(color)
+        ESP:UpdateSettings({Box = {Color = color}})
+    end,
+    
+    SetHealthBarColor = function(color)
+        ESP:UpdateSettings({HealthBar = {Background = color}})
+    end,
+    
+    SetNameTagColor = function(color)
+        ESP:UpdateSettings({NameTag = {Color = color}})
+    end,
+    
+    SetHighlightColor = function(fillColor, outlineColor)
+        ESP:UpdateSettings({
+            Highlight = {
+                FillColor = fillColor,
+                OutlineColor = outlineColor or fillColor
+            }
+        })
+    end,
+    
+    -- Transparency setting helpers
+    SetBoxTransparency = function(transparency)
+        ESP:UpdateSettings({Box = {Transparency = transparency}})
+    end,
+    
+    SetFilledTransparency = function(transparency)
+        ESP:UpdateSettings({Box = {FilledTransparency = transparency}})
+    end,
+    
+    SetHealthBarTransparency = function(backgroundTransparency, outlineTransparency)
+        ESP:UpdateSettings({
+            HealthBar = {
+                BackgroundTransparency = backgroundTransparency or 0,
+                OutlineTransparency = outlineTransparency or 0
+            }
+        })
+    end,
+    
+    SetHighlightTransparency = function(fillTransparency, outlineTransparency)
+        ESP:UpdateSettings({
+            Highlight = {
+                FillTransparency = fillTransparency or 0.95,
+                OutlineTransparency = outlineTransparency or 0.9
+            }
+        })
+    end,
+    
+    -- Gradient setting helpers
+    SetBoxGradient = function(colors, rotation, spinSpeed)
+        ESP:UpdateSettings({
+            Box = {
+                BoxGradient = true,
+                Gradient = {
+                    Colors = colors,
+                    Rotation = rotation or 90
+                },
+                GradientSpinSpeed = spinSpeed or 4,
+                BoxGradientSpin = spinSpeed ~= nil
+            }
+        })
+    end,
+    
+    SetHealthBarGradient = function(colors, rotation, lerpSpeed)
+        ESP:UpdateSettings({
+            HealthBar = {
+                UseGradient = true,
+                Gradient = {
+                    Colors = colors,
+                    Rotation = rotation or 90,
+                    LerpAnimation = lerpSpeed ~= nil,
+                    LerpSpeed = lerpSpeed or 0.028
+                }
+            }
+        })
+    end,
+    
+    SetArmorBarGradient = function(colors, rotation, lerpSpeed)
+        ESP:UpdateSettings({
+            ArmorBar = {
+                UseGradient = true,
+                Gradient = {
+                    Colors = colors,
+                    Rotation = rotation or 90,
+                    LerpAnimation = lerpSpeed ~= nil,
+                    LerpSpeed = lerpSpeed or 0.028
+                }
+            }
+        })
+    end,
+    
+    -- Individual component toggles
+    ToggleBox = function(state) 
+        ESP:UpdateSettings({Box = {Enabled = state}})
+    end,
+    
+    ToggleHealthBar = function(state) 
+        ESP:UpdateSettings({HealthBar = {Enabled = state}})
+    end,
+    
+    ToggleArmorBar = function(state) 
+        ESP:UpdateSettings({ArmorBar = {Enabled = state}})
+    end,
+    
+    ToggleNameTag = function(state) 
+        ESP:UpdateSettings({NameTag = {Enabled = state}})
+    end,
+    
+    ToggleHighlight = function(state) 
+        ESP:UpdateSettings({Highlight = {Enabled = state}})
+    end,
+    
+    ToggleDistance = function(state) 
+        ESP:UpdateSettings({Distance = {Enabled = state}})
+    end,
+    
+    ToggleTeamCheck = function(state) 
+        ESP:UpdateSettings({TeamCheck = state})
+    end,
+    
+    -- Get current settings
+    GetSettings = function()
+        return ESP.Settings
+    end,
+    
+    -- Check if ESP is running
+    IsRunning = function()
+        return ESP.Running
+    end,
+    
+    -- Enable testing mode
+    EnableTestingMode = function()
+        ESP:UpdateSettings({TestingMode = true})
+    end,
+    
+    DisableTestingMode = function()
+        ESP:UpdateSettings({TestingMode = false})
+    end
+}
+
+return ESPModule
