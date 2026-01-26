@@ -365,6 +365,12 @@ function ESP:CreateBox(player)
         stroke.Thickness = i == 2 and self.Settings.Box.Thickness or self.Settings.Outline.Thickness
         stroke.Transparency = i == 2 and self.Settings.Box.Transparency or self.Settings.Outline.Transparency
         stroke.Parent = frame
+
+        if i == 2 then
+            strije.LineJoinMode = Enum.LineJoinMode.Miter
+        end
+
+        stroke.Parent = frame
         
         if self.Settings.Box.Filled and i == 2 then
             frame.BackgroundColor3 = boxColor
