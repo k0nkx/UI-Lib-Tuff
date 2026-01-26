@@ -231,7 +231,7 @@ local Library do
 
         Holder = nil,
         NotifHolder = nil,
-        Font = Enum.Font.Arcade,
+        Font = nil,
         KeyList = nil,
     }
 
