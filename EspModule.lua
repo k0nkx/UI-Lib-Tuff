@@ -1,6 +1,5 @@
 local ESPModule = {}
 
--- Cleanup any existing ESP
 do
     if ESP and ESP.Destroy then
         ESP:Destroy()
@@ -366,24 +365,6 @@ function ESP:CreateBox(player)
         stroke.Transparency = i == 2 and self.Settings.Box.Transparency or self.Settings.Outline.Transparency
         stroke.Parent = frame
 
-        if frame.Name == "Main" then
-            stroke.LineJoinMode = Enum.LineJoinMode.Miter
-        end
-
-        stroke.Parent = frame
-
-        if self.Settings.Box.Filled and frame.Name == "Main" then
-            frame.BackgroundColor3 = boxColor
-            frame.BackgroundTransparency = self.Settings.Box.FilledTransparency
-        end
-
-        if frame.Name == "Main" and self.Settings.Box.BoxGradient then
-            local gradient = Instance.new("UIGradient")
-            gradient.Rotation = self.Settings.Box.Gradient.Rotation
-            gradient.Parent = stroke
-            box.BoxGradient = gradient
-        end
-        
         if self.Settings.Box.Filled and i == 2 then
             frame.BackgroundColor3 = boxColor
             frame.BackgroundTransparency = self.Settings.Box.FilledTransparency
@@ -399,7 +380,6 @@ function ESP:CreateBox(player)
         box[names[i]] = frame
     end
     
-    -- Health Bar
     if self.Settings.HealthBar.Enabled then
         local healthBg = Instance.new("Frame")
         healthBg.Name = "HealthBg"
