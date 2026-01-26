@@ -1,5 +1,6 @@
 local ESPModule = {}
 
+-- Cleanup any existing ESP
 do
     if ESP and ESP.Destroy then
         ESP:Destroy()
@@ -364,7 +365,7 @@ function ESP:CreateBox(player)
         stroke.Thickness = i == 2 and self.Settings.Box.Thickness or self.Settings.Outline.Thickness
         stroke.Transparency = i == 2 and self.Settings.Box.Transparency or self.Settings.Outline.Transparency
         stroke.Parent = frame
-
+        
         if self.Settings.Box.Filled and i == 2 then
             frame.BackgroundColor3 = boxColor
             frame.BackgroundTransparency = self.Settings.Box.FilledTransparency
@@ -380,6 +381,7 @@ function ESP:CreateBox(player)
         box[names[i]] = frame
     end
     
+    -- Health Bar
     if self.Settings.HealthBar.Enabled then
         local healthBg = Instance.new("Frame")
         healthBg.Name = "HealthBg"
@@ -634,6 +636,11 @@ function ESP:SetBoxVisible(box, visible)
     
     if self.Settings.VelocityFlag.Enabled and box.VelocityFlag then
         box.VelocityFlag.Visible = visible
+    end
+    
+    -- FIX: Hide distance label when not visible
+    if self.Settings.Distance.Enabled and box.DistanceLabel then
+        box.DistanceLabel.Visible = visible
     end
 end
 
@@ -1240,7 +1247,7 @@ function ESP:Update()
                 box.VelocityFlag.Visible = false
             end
             
-            -- Distance
+            -- Distance (ONLY SHOW WHEN ON SCREEN)
             if self.Settings.Distance.Enabled and box.DistanceLabel then
                 local firstLabelY = bottom + self.Settings.Distance.Offset.Y - 5
                 box.DistanceLabel.Position = UDim2.new(0, left - 1, 0, firstLabelY)
@@ -1260,7 +1267,9 @@ function ESP:Update()
             end
             
         else
+            -- Player is OFF SCREEN
             if box then
+                -- Hide ALL components including distance label
                 self:SetBoxVisible(box, false)
             end
             
@@ -1606,6 +1615,16 @@ ESPModule = {
     
     DisableTestingMode = function()
         ESP:UpdateSettings({TestingMode = false})
+    end,
+    
+    -- Check if ESP is enabled
+    IsEnabled = function()
+        return ESP.Settings.Enabled
+    end,
+    
+    -- Set maximum distance
+    SetMaxDistance = function(distance)
+        ESP:UpdateSettings({MaxDistance = distance})
     end
 }
 
