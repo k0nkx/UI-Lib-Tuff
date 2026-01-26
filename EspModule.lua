@@ -1,5 +1,6 @@
 local ESPModule = {}
 
+-- Cleanup any existing ESP
 do
     if ESP and ESP.Destroy then
         ESP:Destroy()
@@ -364,7 +365,7 @@ function ESP:CreateBox(player)
         stroke.Thickness = i == 2 and self.Settings.Box.Thickness or self.Settings.Outline.Thickness
         stroke.Transparency = i == 2 and self.Settings.Box.Transparency or self.Settings.Outline.Transparency
         stroke.Parent = frame
-
+        
         if self.Settings.Box.Filled and i == 2 then
             frame.BackgroundColor3 = boxColor
             frame.BackgroundTransparency = self.Settings.Box.FilledTransparency
@@ -380,6 +381,7 @@ function ESP:CreateBox(player)
         box[names[i]] = frame
     end
     
+    -- Health Bar
     if self.Settings.HealthBar.Enabled then
         local healthBg = Instance.new("Frame")
         healthBg.Name = "HealthBg"
@@ -635,6 +637,11 @@ function ESP:SetBoxVisible(box, visible)
     if self.Settings.VelocityFlag.Enabled and box.VelocityFlag then
         box.VelocityFlag.Visible = visible
     end
+    
+    -- FIXED: Include distance label in visibility control
+    if self.Settings.Distance.Enabled and box.DistanceLabel then
+        box.DistanceLabel.Visible = visible
+    end
 end
 
 function ESP:GetCharacterCenter(char)
@@ -889,12 +896,16 @@ function ESP:Update()
         local charCenter = self:GetCharacterCenter(char)
         local localCenter = self:GetCharacterCenter(localChar)
         
-        if not skipCheck and localCenter then
-            local distance = (localCenter - charCenter).Magnitude
-            if distance > self.Settings.MaxDistance then
-                self:CleanupPlayer(player)
-                continue
-            end
+        -- Calculate distance regardless of on-screen status
+        local distance = 0
+        if localCenter then
+            distance = math.floor((localCenter - charCenter).Magnitude)
+        end
+        
+        -- Distance check for max range
+        if not skipCheck and localCenter and distance > self.Settings.MaxDistance then
+            self:CleanupPlayer(player)
+            continue
         end
         
         local box = self.Players[player]
@@ -920,6 +931,10 @@ function ESP:Update()
             continue
         end
         
+        -- Check if character is on screen
+        local onScreen = false
+        local left, top, right, bottom = 0, 0, 0, 0
+        
         local halfSize = size / 2
         local corners = {
             cframe * Vector3.new(halfSize.X, halfSize.Y, halfSize.Z),
@@ -932,10 +947,6 @@ function ESP:Update()
             cframe * Vector3.new(-halfSize.X, -halfSize.Y, -halfSize.Z)
         }
         
-        local left, top = math.huge, math.huge
-        local right, bottom = -math.huge, -math.huge
-        local onScreen = false
-        
         for _, corner in ipairs(corners) do
             local screenPos, visible = Camera:WorldToScreenPoint(corner)
             if visible and screenPos.Z > 0 then
@@ -947,15 +958,18 @@ function ESP:Update()
             end
         end
         
+        -- Get health and armor info
+        local healthPercent, healthValue = 0, 0
+        if self.Settings.TestingMode and player == LocalPlayer then
+            local time = tick()
+            healthPercent = (math.sin(time * 2) + 1) / 2
+            healthValue = math.floor(healthPercent * 100)
+        else
+            healthPercent = humanoid.Health / humanoid.MaxHealth
+            healthValue = math.floor(humanoid.Health)
+        end
+        
         if onScreen then
-            if not box then
-                box = self:CreateBox(player)
-                self.Players[player] = box
-                if self.Settings.Distance.Enabled and box.DistanceLabel then
-                    self:AnimatePopIn(box.DistanceLabel)
-                end
-            end
-            
             left = math.floor(left)
             top = math.floor(top)
             right = math.ceil(right)
@@ -971,6 +985,14 @@ function ESP:Update()
             local height = bottom - top
             local boxTopY = top - 1
             local totalBoxHeight = height + 2
+            
+            if not box then
+                box = self:CreateBox(player)
+                self.Players[player] = box
+                if self.Settings.Distance.Enabled and box.DistanceLabel then
+                    self:AnimatePopIn(box.DistanceLabel)
+                end
+            end
             
             -- Update box visibility based on settings
             if self.Settings.Box.Enabled and box.Main then
@@ -1021,16 +1043,6 @@ function ESP:Update()
                 if box.Outer then box.Outer.Visible = false end
                 if box.Main then box.Main.Visible = false end
                 if box.Inner then box.Inner.Visible = false end
-            end
-            
-            local healthPercent, healthValue
-            if self.Settings.TestingMode and player == LocalPlayer then
-                local time = tick()
-                healthPercent = (math.sin(time * 2) + 1) / 2
-                healthValue = math.floor(healthPercent * 100)
-            else
-                healthPercent = humanoid.Health / humanoid.MaxHealth
-                healthValue = math.floor(humanoid.Health)
             end
             
             local healthState = self.HealthStates[player]
@@ -1240,26 +1252,21 @@ function ESP:Update()
                 box.VelocityFlag.Visible = false
             end
             
-            -- Distance
+            -- Distance - FIXED: Only show when on screen
             if self.Settings.Distance.Enabled and box.DistanceLabel then
                 local firstLabelY = bottom + self.Settings.Distance.Offset.Y - 5
                 box.DistanceLabel.Position = UDim2.new(0, left - 1, 0, firstLabelY)
                 box.DistanceLabel.Size = UDim2.new(0, width + 2, 0, self.Settings.Distance.Size + 4)
-                
-                if localCenter then
-                    local distance = math.floor((localCenter - charCenter).Magnitude)
-                    box.DistanceLabel.Text = "[" .. distance .. "]"
-                    box.DistanceLabel.TextColor3 = self.Settings.Distance.Color
-                    box.DistanceLabel.TextSize = self.Settings.Distance.Size
-                    box.DistanceLabel.Visible = true
-                else
-                    box.DistanceLabel.Visible = false
-                end
-            elseif box.DistanceLabel then
+                box.DistanceLabel.Text = "[" .. distance .. "]"
+                box.DistanceLabel.TextColor3 = self.Settings.Distance.Color
+                box.DistanceLabel.TextSize = self.Settings.Distance.Size
+                box.DistanceLabel.Visible = true
+            elseif box and box.DistanceLabel then
                 box.DistanceLabel.Visible = false
             end
             
         else
+            -- Player is offscreen - FIXED: Hide all components including distance label
             if box then
                 self:SetBoxVisible(box, false)
             end
