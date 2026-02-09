@@ -690,42 +690,52 @@ local Library do
         end
     end
 
-    local CustomFont = { } do
-        function CustomFont:New(Name, Weight, Style, Data)
-            if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
-                return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
-            end
+    local CustomFont = {}
 
-            if not isfile(Library.Folders.Assets .. "/" .. Name .. ".ttf") then 
-                writefile(Library.Folders.Assets .. "/" .. Name .. ".ttf", game:HttpGet(Data.Url))
-            end
+do
+    local HttpService = game:GetService("HttpService")
 
-            local FontData = {
-                name = Name,
-                faces = { {
+    function CustomFont:New(Name, Weight, Style, Data)
+        local jsonPath = Library.Folders.Assets .. "/" .. Name .. ".json"
+        local ttfPath = Library.Folders.Assets .. "/" .. Name .. ".ttf"
+
+        if isfile(jsonPath) then
+            return Font.new(getcustomasset(jsonPath))
+        end
+
+        if not isfile(ttfPath) then
+            writefile(ttfPath, game:HttpGet(Data.Url))
+        end
+
+        local FontData = {
+            name = Name,
+            faces = {
+                {
                     name = "Regular",
                     weight = Weight,
                     style = Style,
-                    assetId = getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".ttf")
-                } }
+                    assetId = getcustomasset(ttfPath)
+                }
             }
+        }
 
-            writefile(Library.Folders.Assets .. "/" .. Name .. ".json", HttpService:JSONEncode(FontData))
-            return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
-        end
-
-        function CustomFont:Get(Name)
-            if isfile(Library.Folders.Assets .. "/" .. Name .. ".json") then
-                return Font.new(getcustomasset(Library.Folders.Assets .. "/" .. Name .. ".json"))
-            end
-        end
-
-        CustomFont:New("Windows-XP-Tahoma", 200, "Regular", {
-            Url = "https://github.com/k0nkx/UI-Lib-Tuff/raw/refs/heads/main/Windows-XP-Tahoma.ttf"
-        })
-
-        Library.Font = CustomFont:Get("Windows-XP-Tahoma")
+        writefile(jsonPath, HttpService:JSONEncode(FontData))
+        return Font.new(getcustomasset(jsonPath))
     end
+
+    function CustomFont:Get(Name)
+        local jsonPath = Library.Folders.Assets .. "/" .. Name .. ".json"
+        if isfile(jsonPath) then
+            return Font.new(getcustomasset(jsonPath))
+        end
+    end
+
+    CustomFont:New("Windows-XP-Tahoma", 200, "Regular", {
+        Url = "https://github.com/k0nkx/UI-Lib-Tuff/raw/refs/heads/main/Windows-XP-Tahoma.ttf"
+    })
+
+    Library.Font = CustomFont:Get("Windows-XP-Tahoma")
+end
 
     Library.Holder = Instances:Create("ScreenGui", {
         Parent = gethui(),
