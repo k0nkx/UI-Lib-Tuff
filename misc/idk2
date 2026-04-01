@@ -116,7 +116,7 @@ function Library:CreateWindow(title)
     create("UIListLayout", {
         FillDirection = Enum.FillDirection.Horizontal,
         Padding = UDim.new(0, 5),
-        HorizontalAlignment = Enum.HorizontalAlignment.Fill,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = TabContainer
     })
