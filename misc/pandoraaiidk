@@ -1,0 +1,645 @@
+-- PandoraWIP UI Library
+-- High-fidelity Pandora.gg recreation for Roblox
+-- Author: Antigravity
+
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+local Library = {
+    Theme = {
+        Accent = Color3.fromRGB(0, 110, 255),
+        Background = Color3.fromRGB(12, 12, 12),
+        Panel = Color3.fromRGB(18, 18, 18),
+        Border = Color3.fromRGB(30, 30, 30),
+        Text = Color3.fromRGB(240, 240, 240),
+        MutedText = Color3.fromRGB(100, 100, 100)
+    },
+    ActiveWindow = nil,
+    ToggleKey = Enum.KeyCode.Insert
+}
+
+--// UTILS
+local function create(class, props)
+    local obj = Instance.new(class)
+    for k, v in pairs(props) do
+        if k ~= "Parent" then obj[k] = v end
+    end
+    obj.Parent = props.Parent
+    return obj
+end
+
+local function tween(obj, info, props)
+    local t = TweenService:Create(obj, info, props)
+    t:Play()
+    return t
+end
+
+--// MAIN
+function Library:CreateWindow(title)
+    local ScreenGui = create("ScreenGui", {
+        Name = "PandoraUI",
+        Parent = (gethui and gethui()) or (game:GetService("CoreGui")),
+        ResetOnSpawn = false
+    })
+
+    local Main = create("Frame", {
+        Name = "Main",
+        Size = UDim2.new(0, 700, 0, 500),
+        Position = UDim2.new(0.5, -350, 0.5, -250),
+        BackgroundColor3 = self.Theme.Background,
+        BorderSizePixel = 1,
+        BorderColor3 = self.Theme.Border,
+        Parent = ScreenGui
+    })
+
+    -- Dragging
+    local dragInput, dragStart, startPos
+    Main.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragStart = input.Position
+            startPos = Main.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragStart = nil
+                end
+            end)
+        end
+    end)
+    Main.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragStart then
+            local delta = input.Position - dragStart
+            Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    -- Window Toggle
+    UIS.InputBegan:Connect(function(input, gpe)
+        if not gpe and input.KeyCode == self.ToggleKey then
+            Main.Visible = not Main.Visible
+        end
+    end)
+
+    -- Top Selection Bar
+    local TopBar = create("Frame", {
+        Name = "TopBar",
+        Size = UDim2.new(1, 0, 0, 40),
+        BackgroundColor3 = self.Theme.Background,
+        BorderSizePixel = 0,
+        Parent = Main
+    })
+    
+    local Logo = create("TextLabel", {
+        Name = "Logo",
+        Text = title or "Pandora.gg",
+        Size = UDim2.new(0, 150, 1, 0),
+        Position = UDim2.new(0, 15, 0, 0),
+        TextColor3 = self.Theme.Accent,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Font = Enum.Font.SourceSansBold,
+        TextSize = 18,
+        BackgroundTransparency = 1,
+        Parent = TopBar
+    })
+
+    local TabContainer = create("Frame", {
+        Name = "Tabs",
+        Size = UDim2.new(1, -160, 1, 0),
+        Position = UDim2.new(0, 160, 0, 0),
+        BackgroundTransparency = 1,
+        Parent = TopBar
+    })
+
+    local TabList = create("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 20),
+        Parent = TabContainer
+    })
+
+    -- Content Area
+    local Container = create("Frame", {
+        Name = "Container",
+        Size = UDim2.new(1, -20, 1, -50),
+        Position = UDim2.new(0, 10, 0, 40),
+        BackgroundColor3 = self.Theme.Background,
+        BorderSizePixel = 0,
+        Parent = Main
+    })
+
+    local Footer = create("Frame", {
+        Name = "Footer",
+        Size = UDim2.new(1, 0, 0, 25),
+        Position = UDim2.new(0, 0, 1, -25),
+        BackgroundTransparency = 1,
+        Parent = Main
+    })
+    
+    create("TextLabel", {
+        Text = "Build: Live",
+        Size = UDim2.new(0, 100, 1, 0),
+        Position = UDim2.new(0, 15, 0, 0),
+        TextColor3 = self.Theme.Accent,
+        TextSize = 12,
+        BackgroundTransparency = 1,
+        Parent = Footer
+    })
+
+    create("TextLabel", {
+        Text = LocalPlayer.Name,
+        Size = UDim2.new(0, 100, 1, 0),
+        Position = UDim2.new(1, -115, 0, 0),
+        TextColor3 = self.Theme.Accent,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        BackgroundTransparency = 1,
+        Parent = Footer
+    })
+
+    local Window = {
+        Main = Main,
+        Tabs = {},
+        ActiveTab = nil
+    }
+
+    function Window:CreateTab(tabName)
+        local TabButton = create("TextButton", {
+            Name = tabName,
+            Text = tabName,
+            Size = UDim2.new(0, 60, 1, 0),
+            TextColor3 = Library.Theme.MutedText,
+            BackgroundTransparency = 1,
+            Font = Enum.Font.SourceSansBold,
+            TextSize = 14,
+            Parent = TabContainer
+        })
+
+        local TabPage = create("Frame", {
+            Name = tabName .. "_Page",
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Visible = false,
+            Parent = Container
+        })
+
+        local Sidebar = create("Frame", {
+            Name = "Sidebar",
+            Size = UDim2.new(0, 140, 1, -10),
+            Position = UDim2.new(0, 5, 0, 0),
+            BackgroundColor3 = Library.Theme.Background,
+            BorderSizePixel = 1,
+            BorderColor3 = Library.Theme.Border,
+            Parent = TabPage
+        })
+
+        local SideList = create("UIListLayout", {
+            Padding = UDim.new(0, 2),
+            Parent = Sidebar
+        })
+
+        local Content = create("Frame", {
+            Name = "Content",
+            Size = UDim2.new(1, -155, 1, -10),
+            Position = UDim2.new(0, 150, 0, 0),
+            BackgroundTransparency = 1,
+            Parent = TabPage
+        })
+
+        local ContentList = create("UIListLayout", {
+            FillDirection = Enum.FillDirection.Horizontal,
+            Padding = UDim.new(0, 10),
+            Parent = Content
+        })
+
+        local Tab = {
+            Button = TabButton,
+            Page = TabPage,
+            SubTabs = {}
+        }
+
+        TabButton.MouseButton1Click:Connect(function()
+            if Window.ActiveTab then
+                Window.ActiveTab.Page.Visible = false
+                Window.ActiveTab.Button.TextColor3 = Library.Theme.MutedText
+            end
+            Window.ActiveTab = Tab
+            TabPage.Visible = true
+            TabButton.TextColor3 = Library.Theme.Text
+        end)
+
+        if not Window.ActiveTab then
+            Window.ActiveTab = Tab
+            TabPage.Visible = true
+            TabButton.TextColor3 = Library.Theme.Text
+        end
+
+        function Tab:CreateSubTab(subName)
+            local SubButton = create("TextButton", {
+                Name = subName,
+                Text = subName,
+                Size = UDim2.new(1, -10, 0, 25),
+                TextColor3 = Library.Theme.MutedText,
+                BackgroundTransparency = 1,
+                Font = Enum.Font.SourceSans,
+                TextSize = 13,
+                Parent = Sidebar
+            })
+
+            local SubPage = create("ScrollingFrame", {
+                Name = subName .. "_SubPage",
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                ScrollBarThickness = 0,
+                Visible = false,
+                Parent = Content
+            })
+
+            local GroupGrid = create("UIGridLayout", {
+                CellSize = UDim2.new(0.5, -5, 1, 0),
+                CellPadding = UDim2.new(0, 10, 0, 10),
+                Parent = SubPage
+            })
+
+            local SubTab = {
+                Button = SubButton,
+                Page = SubPage
+            }
+
+            SubButton.MouseButton1Click:Connect(function()
+                if Tab.ActiveSubTab then
+                    Tab.ActiveSubTab.Page.Visible = false
+                    Tab.ActiveSubTab.Button.TextColor3 = Library.Theme.MutedText
+                end
+                Tab.ActiveSubTab = SubTab
+                SubPage.Visible = true
+                SubButton.TextColor3 = Library.Theme.Accent
+            end)
+
+            if not Tab.ActiveSubTab then
+                Tab.ActiveSubTab = SubTab
+                SubPage.Visible = true
+                SubButton.TextColor3 = Library.Theme.Accent
+            end
+
+            function SubTab:CreateGroupBox(groupName)
+                local BoxFrame = create("Frame", {
+                    Name = groupName .. "_Box",
+                    BackgroundColor3 = Library.Theme.Background,
+                    BorderSizePixel = 1,
+                    BorderColor3 = Library.Theme.Border,
+                    Parent = SubPage
+                })
+
+                local BoxLabel = create("TextLabel", {
+                    Text = groupName,
+                    Size = UDim2.new(0, 100, 0, 15),
+                    Position = UDim2.new(0, 10, 0, -8),
+                    BackgroundColor3 = Library.Theme.Background,
+                    TextColor3 = Library.Theme.Text,
+                    Font = Enum.Font.SourceSansBold,
+                    TextSize = 12,
+                    Parent = BoxFrame
+                })
+
+                local List = create("UIListLayout", {
+                    Padding = UDim.new(0, 5),
+                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                    SortOrder = Enum.SortOrder.LayoutOrder,
+                    Parent = BoxFrame
+                })
+                
+                create("UIPadding", {
+                    PaddingTop = UDim.new(0, 10),
+                    PaddingLeft = UDim.new(0, 10),
+                    PaddingRight = UDim.new(0, 5),
+                    Parent = BoxFrame
+                })
+
+                local Group = {
+                    Frame = BoxFrame
+                }
+
+                function Group:CreateToggle(toggleName, default, callback, settingsCallback)
+                    local ToggleFrame = create("TextButton", {
+                        Name = toggleName,
+                        Size = UDim2.new(1, -5, 0, 20),
+                        BackgroundTransparency = 1,
+                        Text = "",
+                        Parent = BoxFrame
+                    })
+
+                    local Box = create("Frame", {
+                        Size = UDim2.new(0, 8, 0, 8),
+                        Position = UDim2.new(0, 0, 0.5, -4),
+                        BackgroundColor3 = default and Library.Theme.Accent or Library.Theme.Panel,
+                        BorderSizePixel = 1,
+                        BorderColor3 = Library.Theme.Border,
+                        Parent = ToggleFrame
+                    })
+
+                    local Label = create("TextLabel", {
+                        Text = toggleName,
+                        Size = UDim2.new(1, -35, 1, 0),
+                        Position = UDim2.new(0, 15, 0, 0),
+                        TextColor3 = default and Library.Theme.Text or Library.Theme.MutedText,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 13,
+                        BackgroundTransparency = 1,
+                        Parent = ToggleFrame
+                    })
+
+                    if settingsCallback then
+                        local Gear = create("ImageButton", {
+                            Size = UDim2.new(0, 12, 0, 12),
+                            Position = UDim2.new(1, -12, 0.5, -6),
+                            BackgroundTransparency = 1,
+                            Image = "rbxassetid://6031280224", -- Gear Icon
+                            ImageColor3 = Library.Theme.MutedText,
+                            Parent = ToggleFrame
+                        })
+                        Gear.MouseButton1Click:Connect(settingsCallback)
+                    end
+
+                    local status = default
+                    ToggleFrame.MouseButton1Click:Connect(function()
+                        status = not status
+                        Box.BackgroundColor3 = status and Library.Theme.Accent or Library.Theme.Panel
+                        Label.TextColor3 = status and Library.Theme.Text or Library.Theme.MutedText
+                        if callback then callback(status) end
+                    end)
+                end
+
+                function Group:CreateSlider(sliderName, min, max, default, unit, callback)
+                    local SliderFrame = create("Frame", {
+                        Size = UDim2.new(1, -5, 0, 35),
+                        BackgroundTransparency = 1,
+                        Parent = BoxFrame
+                    })
+
+                    local Label = create("TextLabel", {
+                        Text = sliderName,
+                        Size = UDim2.new(1, 0, 0, 15),
+                        TextColor3 = Library.Theme.MutedText,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 13,
+                        BackgroundTransparency = 1,
+                        Parent = SliderFrame
+                    })
+
+                    local ValueLabel = create("TextLabel", {
+                        Text = default .. (unit or ""),
+                        Size = UDim2.new(1, 0, 0, 15),
+                        Position = UDim2.new(0, 0, 0, 0),
+                        TextColor3 = Library.Theme.MutedText,
+                        TextXAlignment = Enum.TextXAlignment.Right,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 13,
+                        BackgroundTransparency = 1,
+                        Parent = SliderFrame
+                    })
+
+                    local BG = create("Frame", {
+                        Size = UDim2.new(1, 0, 0, 4),
+                        Position = UDim2.new(0, 0, 0, 20),
+                        BackgroundColor3 = Library.Theme.Panel,
+                        BorderSizePixel = 1,
+                        BorderColor3 = Library.Theme.Border,
+                        Parent = SliderFrame
+                    })
+
+                    local Fill = create("Frame", {
+                        Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+                        BackgroundColor3 = Library.Theme.Accent,
+                        BorderSizePixel = 0,
+                        Parent = BG
+                    })
+
+                    local dragging = false
+                    local function move()
+                        local pos = math.clamp((Mouse.X - BG.AbsolutePosition.X) / BG.AbsoluteSize.X, 0, 1)
+                        local val = math.floor(min + (max - min) * pos)
+                        Fill.Size = UDim2.new(pos, 0, 1, 0)
+                        ValueLabel.Text = val .. (unit or "")
+                        if callback then callback(val) end
+                    end
+
+                    BG.InputBegan:Connect(function(input)
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                            dragging = true
+                            move()
+                        end
+                    end)
+                    UIS.InputEnded:Connect(function(input)
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                            dragging = false
+                        end
+                    end)
+                    UIS.InputChanged:Connect(function(input)
+                        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                            move()
+                        end
+                    end)
+                end
+
+                function Group:CreateDropdown(dropName, list, default, callback)
+                    local DropFrame = create("Frame", {
+                        Size = UDim2.new(1, -5, 0, 45),
+                        BackgroundTransparency = 1,
+                        Parent = BoxFrame
+                    })
+
+                    local Label = create("TextLabel", {
+                        Text = dropName,
+                        Size = UDim2.new(1, 0, 0, 15),
+                        TextColor3 = Library.Theme.MutedText,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 13,
+                        BackgroundTransparency = 1,
+                        Parent = DropFrame
+                    })
+
+                    local Button = create("TextButton", {
+                        Text = default or "-",
+                        Size = UDim2.new(1, 0, 0, 20),
+                        Position = UDim2.new(0, 0, 0, 20),
+                        BackgroundColor3 = Library.Theme.Background,
+                        TextColor3 = Library.Theme.MutedText,
+                        BorderSizePixel = 1,
+                        BorderColor3 = Library.Theme.Border,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 13,
+                        Parent = DropFrame
+                    })
+
+                    local Arrow = create("TextLabel", {
+                        Text = "▼",
+                        Size = UDim2.new(0, 20, 1, 0),
+                        Position = UDim2.new(1, -20, 0, 0),
+                        TextColor3 = Library.Theme.MutedText,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 10,
+                        BackgroundTransparency = 1,
+                        Parent = Button
+                    })
+
+                    local ListFrame = create("ScrollingFrame", {
+                        Size = UDim2.new(1, 0, 0, 100),
+                        Position = UDim2.new(0, 0, 1, 1),
+                        BackgroundColor3 = Library.Theme.Background,
+                        BorderSizePixel = 1,
+                        BorderColor3 = Library.Theme.Border,
+                        Visible = false,
+                        ZIndex = 5,
+                        Parent = Button
+                    })
+                    create("UIListLayout", { Parent = ListFrame })
+
+                    Button.MouseButton1Click:Connect(function()
+                        ListFrame.Visible = not ListFrame.Visible
+                    end)
+
+                    for _, item in ipairs(list) do
+                        local ItemBtn = create("TextButton", {
+                            Text = item,
+                            Size = UDim2.new(1, 0, 0, 20),
+                            BackgroundColor3 = Library.Theme.Background,
+                            TextColor3 = Library.Theme.MutedText,
+                            BorderSizePixel = 0,
+                            Font = Enum.Font.SourceSans,
+                            TextSize = 13,
+                            ZIndex = 6,
+                            Parent = ListFrame
+                        })
+                        ItemBtn.MouseButton1Click:Connect(function()
+                            Button.Text = item
+                            ListFrame.Visible = false
+                            if callback then callback(item) end
+                        end)
+                    end
+                end
+
+                function Group:CreateInput(inputName, placeholder, callback)
+                    local InputFrame = create("Frame", {
+                        Size = UDim2.new(1, -5, 0, 45),
+                        BackgroundTransparency = 1,
+                        Parent = BoxFrame
+                    })
+
+                    local Label = create("TextLabel", {
+                        Text = inputName,
+                        Size = UDim2.new(1, 0, 0, 15),
+                        TextColor3 = Library.Theme.MutedText,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 13,
+                        BackgroundTransparency = 1,
+                        Parent = InputFrame
+                    })
+
+                    local Box = create("TextBox", {
+                        PlaceholderText = placeholder or "Enter text here...",
+                        Text = "",
+                        Size = UDim2.new(1, 0, 0, 22),
+                        Position = UDim2.new(0, 0, 0, 20),
+                        BackgroundColor3 = Library.Theme.Background,
+                        TextColor3 = Library.Theme.Text,
+                        PlaceholderColor3 = Library.Theme.MutedText,
+                        BorderSizePixel = 1,
+                        BorderColor3 = Library.Theme.Border,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 13,
+                        Parent = InputFrame
+                    })
+
+                    Box.FocusLost:Connect(function(enter)
+                        if enter and callback then callback(Box.Text) end
+                    end)
+                end
+
+                function Group:CreateKeybind(kbName, default, callback)
+                    local BindFrame = create("Frame", {
+                        Size = UDim2.new(1, -5, 0, 20),
+                        BackgroundTransparency = 1,
+                        Parent = BoxFrame
+                    })
+
+                    local Label = create("TextLabel", {
+                        Text = kbName,
+                        Size = UDim2.new(1, -50, 1, 0),
+                        TextColor3 = Library.Theme.MutedText,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 13,
+                        BackgroundTransparency = 1,
+                        Parent = BindFrame
+                    })
+
+                    local Button = create("TextButton", {
+                        Text = default and default.Name or "[None]",
+                        Size = UDim2.new(0, 50, 1, 0),
+                        Position = UDim2.new(1, -50, 0, 0),
+                        BackgroundColor3 = Library.Theme.Background,
+                        TextColor3 = Library.Theme.Accent,
+                        BorderSizePixel = 1,
+                        BorderColor3 = Library.Theme.Border,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 12,
+                        Parent = BindFrame
+                    })
+
+                    local currentBind = default
+                    local listening = false
+
+                    Button.MouseButton1Click:Connect(function()
+                        listening = true
+                        Button.Text = "..."
+                    end)
+
+                    UIS.InputBegan:Connect(function(input)
+                        if listening and input.UserInputType == Enum.UserInputType.Keyboard then
+                            listening = false
+                            currentBind = input.KeyCode
+                            Button.Text = "[" .. input.KeyCode.Name .. "]"
+                            if callback then callback(input.KeyCode) end
+                        end
+                    end)
+                end
+
+                function Group:CreateButton(btnName, callback)
+                    local Btn = create("TextButton", {
+                        Text = btnName,
+                        Size = UDim2.new(1, -5, 0, 22),
+                        BackgroundColor3 = Library.Theme.Panel,
+                        TextColor3 = Library.Theme.MutedText,
+                        BorderSizePixel = 1,
+                        BorderColor3 = Library.Theme.Border,
+                        Font = Enum.Font.SourceSans,
+                        TextSize = 13,
+                        Parent = BoxFrame
+                    })
+                    Btn.MouseButton1Click:Connect(callback)
+                end
+
+                return Group
+            end
+
+            return SubTab
+        end
+
+        return Tab
+    end
+
+    return Window
+end
+
+return Library
