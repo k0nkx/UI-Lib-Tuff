@@ -2114,6 +2114,145 @@ do
         return Slider;
     end;
 
+    function Funcs:AddTabbox()
+        local Tabbox = {
+            Tabs = {};
+        };
+
+        local Groupbox = self;
+        local Container = Groupbox.Container;
+
+        local TabboxButtons = Library:Create('Frame', {
+            BackgroundColor3 = Color3.fromRGB(30, 30, 40);
+            BorderColor3 = Color3.fromRGB(45, 45, 55);
+            BorderSizePixel = 1;
+            Position = UDim2.new(0, 0, 0, 0);
+            Size = UDim2.new(1, -4, 0, 20);
+            ZIndex = 5;
+            Parent = Container;
+        });
+
+        Library:Create('UIListLayout', {
+            FillDirection = Enum.FillDirection.Horizontal;
+            HorizontalAlignment = Enum.HorizontalAlignment.Left;
+            SortOrder = Enum.SortOrder.LayoutOrder;
+            Parent = TabboxButtons;
+        });
+
+        function Tabbox:AddTab(Name)
+            local Tab = {};
+
+            local Button = Library:Create('Frame', {
+                BackgroundColor3 = Color3.fromRGB(30, 30, 40);
+                BorderColor3 = Color3.fromRGB(45, 45, 55);
+                BorderSizePixel = 1;
+                Size = UDim2.new(0.5, 0, 1, 0);
+                ZIndex = 6;
+                Parent = TabboxButtons;
+            });
+
+            local ButtonLabel = Library:CreateLabel({
+                Size = UDim2.new(1, 0, 1, 0);
+                TextSize = 14;
+                Text = Name;
+                TextXAlignment = Enum.TextXAlignment.Center;
+                ZIndex = 7;
+                Parent = Button;
+            });
+
+            local Block = Library:Create('Frame', {
+                BackgroundColor3 = Library.AccentColor;
+                BorderSizePixel = 0;
+                Position = UDim2.new(0, 0, 1, -1);
+                Size = UDim2.new(1, 0, 0, 1);
+                Visible = false;
+                ZIndex = 9;
+                Parent = Button;
+            });
+
+            local TabContainer = Library:Create('Frame', {
+                BackgroundTransparency = 1;
+                Position = UDim2.new(0, 0, 0, 0);
+                Size = UDim2.new(1, 0, 0, 0);
+                Visible = false;
+                ZIndex = 1;
+                Parent = Container;
+            });
+
+            Library:Create('UIListLayout', {
+                FillDirection = Enum.FillDirection.Vertical;
+                SortOrder = Enum.SortOrder.LayoutOrder;
+                Parent = TabContainer;
+            });
+
+            function Tab:Show()
+                for _, T in next, Tabbox.Tabs do
+                    T:Hide();
+                end;
+
+                TabContainer.Visible = true;
+                Block.Visible = true;
+
+                Button.BackgroundColor3 = Color3.fromRGB(40, 40, 50);
+                Groupbox:Resize();
+            end;
+
+            function Tab:Hide()
+                TabContainer.Visible = false;
+                Block.Visible = false;
+
+                Button.BackgroundColor3 = Color3.fromRGB(30, 30, 40);
+            end;
+
+            function Tab:Resize()
+                local TabCount = 0;
+                for _, _ in next, Tabbox.Tabs do TabCount = TabCount + 1 end;
+
+                for _, B in next, TabboxButtons:GetChildren() do
+                    if B:IsA('Frame') then
+                        B.Size = UDim2.new(1 / TabCount, 0, 1, 0);
+                    end;
+                end;
+
+                if not TabContainer.Visible then return end;
+
+                local Size = 0;
+                for _, Element in next, TabContainer:GetChildren() do
+                    if (not Element:IsA('UIListLayout')) and Element.Visible then
+                        Size = Size + Element.Size.Y.Offset;
+                    end;
+                end;
+
+                TabContainer.Size = UDim2.new(1, 0, 0, Size);
+                Groupbox:Resize();
+            end;
+
+            Button.InputBegan:Connect(function(Input)
+                if Input.UserInputType == Enum.UserInputType.MouseButton1 and not Library:MouseIsOverOpenedFrame() then
+                    Tab:Show();
+                end;
+            end);
+
+            Tab.Container = TabContainer;
+            Tabbox.Tabs[Name] = Tab;
+
+            setmetatable(Tab, { __index = Funcs });
+
+            Tab:Resize();
+
+            if #TabboxButtons:GetChildren() == 2 then
+                Tab:Show();
+            end;
+
+            return Tab;
+        end;
+
+        Groupbox:AddBlank(5);
+        Groupbox:Resize();
+
+        return Tabbox;
+    end;
+
     function Funcs:AddDropdown(Idx, Info)
         if Info.SpecialType == 'Player' then
             Info.Values = GetPlayersString();
