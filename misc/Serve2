@@ -305,15 +305,17 @@ function library:addTab(name)
     newButton.Visible = true
     newButton.Text = name
     
-    local buttonElement = newButton:FindFirstChild("element") or Instance.new("Frame")
-    if not buttonElement.Parent then
-        buttonElement.Name = "element"
-        buttonElement.Parent = newButton
-        buttonElement.BackgroundColor3 = library.libColor
-        buttonElement.BorderSizePixel = 0
-        buttonElement.Position = UDim2.new(0, 0, 1, -2)
-        buttonElement.Size = UDim2.new(1, 0, 0, 2)
-        buttonElement.BackgroundTransparency = 1.000
+    -- Create element frame if it doesn't exist
+    local elem = newButton:FindFirstChild("element")
+    if not elem then
+        elem = Instance.new("Frame")
+        elem.Name = "element"
+        elem.Parent = newButton
+        elem.BackgroundColor3 = library.libColor
+        elem.BorderSizePixel = 0
+        elem.Position = UDim2.new(0, 0, 1, -2)
+        elem.Size = UDim2.new(1, 0, 0, 2)
+        elem.BackgroundTransparency = 1.000
     end
     
     table.insert(library.tabs, newTab)
@@ -326,7 +328,8 @@ function library:addTab(name)
         btn.Position = UDim2.new(0, (i-1) * 100, 0, 0)
     end
     
-    newButton.MouseButton1Click:Connect(function()
+    -- Function to select this tab
+    local function selectThisTab()
         for _, tab in next, library.tabs do
             tab.Visible = tab == newTab
         end
@@ -335,23 +338,26 @@ function library:addTab(name)
         end
         for _, btn in next, library.tabbuttons do
             local state = btn == newButton
-            local elem = btn:FindFirstChild("element")
-            if elem then
+            local btnElem = btn:FindFirstChild("element")
+            if btnElem then
                 if state then
-                    elem.Visible = true
-                    library:Tween(elem, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
+                    btnElem.Visible = true
+                    library:Tween(btnElem, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0})
                     btn.TextColor3 = Color3.fromRGB(244, 244, 244)
                 else
-                    library:Tween(elem, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
+                    library:Tween(btnElem, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1})
                     btn.TextColor3 = Color3.fromRGB(144, 144, 144)
                 end
             end
         end
-    end)
+    end
     
-    -- Select first tab by default if this is the first one
+    -- Connect click event
+    newButton.MouseButton1Click:Connect(selectThisTab)
+    
+    -- Select first tab by default
     if #library.tabs == 1 then
-        newButton.MouseButton1Click:Fire()
+        selectThisTab()
     end
     
     -- Tab API
@@ -1792,13 +1798,13 @@ function library:loadConfig()
                     if option.type == "toggle" then
                         option.changeState(false)
                     elseif option.type == "slider" then
-                        option.changeState(option.args.value or 0)
+                        option.changeState(option.oldargs.value or 0)
                     elseif option.type == "textbox" or option.type == "list" or option.type == "cfg" then
-                        option.changeState(option.args.value or option.args.text or "")
+                        option.changeState(option.oldargs.value or option.oldargs.text or "")
                     elseif option.type == "colorpicker" then
-                        option.changeState(option.args.color or Color3.new(1, 1, 1))
+                        option.changeState(option.oldargs.color or Color3.new(1, 1, 1))
                     elseif option.type == "keybind" then
-                        option.changeState(option.args.key or Enum.KeyCode.Unknown)
+                        option.changeState(option.oldargs.key or Enum.KeyCode.Unknown)
                     end
                 end
             end)
