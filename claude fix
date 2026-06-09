@@ -200,10 +200,10 @@ local Library do
         },
 
         Images = {
-            ["Saturation"] = {"Saturation.png", "https://raw.githubusercontent.com/k0nkx/UI-Lib-Tuff/refs/heads/main/saturation.png" },
-            ["Value"] = { "Value.png", "https://github.com/k0nkx/UI-Lib-Tuff/blob/main/value.png?raw=true" },
-            ["Hue"] = { "Hue.png", "https://github.com/k0nkx/UI-Lib-Tuff/blob/main/hue.png?raw=true" },
-            ["Checkers"] = { "Checkers.png", "https://github.com/k0nkx/UI-Lib-Tuff/blob/main/checkers.png?raw=true" },
+            ["Saturation"] = {"Saturation.png", "https://raw.githubusercontent.com/k0nkx/UI-Lib-Tuff/main/Saturation.png" },
+            ["Value"] = { "Value.png", "https://raw.githubusercontent.com/k0nkx/UI-Lib-Tuff/main/Value.png" },
+            ["Hue"] = { "Hue.png", "https://raw.githubusercontent.com/k0nkx/UI-Lib-Tuff/main/Hue.png" },
+            ["Checkers"] = { "Checkers.png", "https://raw.githubusercontent.com/k0nkx/UI-Lib-Tuff/main/Checkers.png" },
         },
 
         -- Ignore below
