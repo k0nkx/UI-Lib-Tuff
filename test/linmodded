@@ -30,12 +30,12 @@ local Library = {
     HudRegistry = {};
 
     FontColor = Color3.fromRGB(255, 255, 255);
-    MainColor = Color3.fromRGB(24, 24, 27);      -- Darker zinc
-    BackgroundColor = Color3.fromRGB(18, 18, 20); -- Deep dark
-    AccentColor = Color3.fromRGB(99, 102, 241);   -- Indigo 400
-    AccentColorDark = Color3.fromRGB(79, 82, 221); -- Indigo 500
-    OutlineColor = Color3.fromRGB(63, 63, 70);    -- Zinc 700
-    RiskColor = Color3.fromRGB(239, 68, 68),      -- Red 500
+    MainColor = Color3.fromRGB(30, 30, 35);
+    BackgroundColor = Color3.fromRGB(20, 20, 24);
+    AccentColor = Color3.fromRGB(99, 102, 241);
+    AccentColorDark = Color3.fromRGB(79, 82, 221);
+    OutlineColor = Color3.fromRGB(55, 55, 62);
+    RiskColor = Color3.fromRGB(239, 68, 68),
 
     Black = Color3.new(0, 0, 0);
     Font = Enum.Font.Gotham,
@@ -196,6 +196,7 @@ function Library:AddToolTip(InfoStr, HoverInstance)
     local Tooltip = Library:Create('Frame', {
         BackgroundColor3 = Library.MainColor,
         BorderColor3 = Library.OutlineColor,
+        BorderSizePixel = 1,
 
         Size = UDim2.fromOffset(X + 10, Y + 8),
         ZIndex = 100,
@@ -812,11 +813,9 @@ do
             ColorPicker.Value = Color3.fromHSV(ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib);
             SatVibMap.BackgroundColor3 = Color3.fromHSV(ColorPicker.Hue, 1, 1);
 
-            Library:Create(DisplayFrame, {
-                BackgroundColor3 = ColorPicker.Value;
-                BackgroundTransparency = ColorPicker.Transparency;
-                BorderColor3 = Library:GetDarkerColor(ColorPicker.Value);
-            });
+            DisplayFrame.BackgroundColor3 = ColorPicker.Value;
+            DisplayFrame.BackgroundTransparency = ColorPicker.Transparency;
+            DisplayFrame.BorderColor3 = Library:GetDarkerColor(ColorPicker.Value);
 
             if TransparencyBoxInner then
                 TransparencyBoxInner.BackgroundColor3 = ColorPicker.Value;
@@ -1792,12 +1791,6 @@ do
             Parent = ToggleOuter;
         });
 
-        Library:AddToRegistry(ToggleInner, {
-            BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
-        });
-
-        -- Checkmark for when toggled
         local Checkmark = Library:Create('Frame', {
             BackgroundColor3 = Library.AccentColor;
             BorderSizePixel = 0;
@@ -2884,6 +2877,7 @@ function Library:CreateWindow(...)
     local MainSectionOuter = Library:Create('Frame', {
         BackgroundColor3 = Library.BackgroundColor;
         BorderColor3 = Library.OutlineColor;
+        BorderSizePixel = 1;
         Position = UDim2.new(0, 8, 0, 28);
         Size = UDim2.new(1, -16, 1, -36);
         ZIndex = 1;
@@ -2926,6 +2920,7 @@ function Library:CreateWindow(...)
     local TabContainer = Library:Create('Frame', {
         BackgroundColor3 = Library.MainColor;
         BorderColor3 = Library.OutlineColor;
+        BorderSizePixel = 1;
         Position = UDim2.new(0, 8, 0, 33);
         Size = UDim2.new(1, -16, 1, -41);
         ZIndex = 2;
@@ -2952,6 +2947,7 @@ function Library:CreateWindow(...)
         local TabButton = Library:Create('Frame', {
             BackgroundColor3 = Library.BackgroundColor;
             BorderColor3 = Library.OutlineColor;
+            BorderSizePixel = 1;
             Size = UDim2.new(0, TabButtonWidth + 12, 1, 0);
             ZIndex = 1;
             Parent = TabArea;
