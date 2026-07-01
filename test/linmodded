@@ -29,16 +29,18 @@ local Library = {
 
     HudRegistry = {};
 
-    FontColor = Color3.fromRGB(220, 220, 220);
-    MainColor = Color3.fromRGB(18, 18, 22);
-    BackgroundColor = Color3.fromRGB(12, 12, 16);
-    AccentColor = Color3.fromRGB(100, 180, 255);
-    OutlineColor = Color3.fromRGB(40, 42, 48);
+    -- Modern Dark Theme with Glass Effect
+    FontColor = Color3.fromRGB(220, 220, 230);
+    MainColor = Color3.fromRGB(30, 30, 35);
+    BackgroundColor = Color3.fromRGB(20, 20, 25);
+    AccentColor = Color3.fromRGB(100, 140, 255);
+    AccentColor2 = Color3.fromRGB(180, 100, 255);
+    OutlineColor = Color3.fromRGB(45, 45, 55);
     RiskColor = Color3.fromRGB(255, 80, 80),
-    AccentColorDark = Color3.fromRGB(60, 120, 200),
-
+    GlassColor = Color3.fromRGB(255, 255, 255);
+    
     Black = Color3.new(0, 0, 0);
-    Font = Enum.Font.GothamMedium,
+    Font = Enum.Font.Gotham;
 
     OpenedFrames = {};
     DependencyBoxes = {};
@@ -194,17 +196,28 @@ function Library:AddToolTip(InfoStr, HoverInstance)
     local X, Y = Library:GetTextBounds(InfoStr, Library.Font, 14);
     local Tooltip = Library:Create('Frame', {
         BackgroundColor3 = Library.MainColor,
-        BorderColor3 = Library.OutlineColor,
+        BorderColor3 = Library.AccentColor,
+        BorderMode = Enum.BorderMode.Inset,
 
-        Size = UDim2.fromOffset(X + 5, Y + 4),
+        Size = UDim2.fromOffset(X + 10, Y + 6),
         ZIndex = 100,
         Parent = Library.ScreenGui,
 
         Visible = false,
     })
 
+    -- Add glass effect
+    Library:Create('Frame', {
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+        BackgroundTransparency = 0.05;
+        BorderSizePixel = 0;
+        Size = UDim2.new(1, 0, 1, 0);
+        ZIndex = 1;
+        Parent = Tooltip;
+    });
+
     local Label = Library:CreateLabel({
-        Position = UDim2.fromOffset(3, 1),
+        Position = UDim2.fromOffset(5, 2),
         Size = UDim2.fromOffset(X, Y);
         TextSize = 14;
         Text = InfoStr,
@@ -217,7 +230,7 @@ function Library:AddToolTip(InfoStr, HoverInstance)
 
     Library:AddToRegistry(Tooltip, {
         BackgroundColor3 = 'MainColor';
-        BorderColor3 = 'OutlineColor';
+        BorderColor3 = 'AccentColor';
     });
 
     Library:AddToRegistry(Label, {
@@ -313,7 +326,7 @@ end;
 
 function Library:GetDarkerColor(Color)
     local H, S, V = Color3.toHSV(Color);
-    return Color3.fromHSV(H, S, V / 1.5);
+    return Color3.fromHSV(H, S, math.max(0, V / 1.8));
 end;
 Library.AccentColorDark = Library:GetDarkerColor(Library.AccentColor);
 
@@ -423,7 +436,7 @@ do
         local DisplayFrame = Library:Create('Frame', {
             BackgroundColor3 = ColorPicker.Value;
             BorderColor3 = Library:GetDarkerColor(ColorPicker.Value);
-            BorderSizePixel = 1;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(0, 28, 0, 14);
             ZIndex = 6;
             Parent = ToggleLabel;
@@ -455,11 +468,21 @@ do
 
         local PickerFrameInner = Library:Create('Frame', {
             BackgroundColor3 = Library.BackgroundColor;
-            BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderColor3 = Library.AccentColor;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 16;
             Parent = PickerFrameOuter;
+        });
+
+        -- Glass effect
+        Library:Create('Frame', {
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+            BackgroundTransparency = 0.03;
+            BorderSizePixel = 0;
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 1;
+            Parent = PickerFrameInner;
         });
 
         local Highlight = Library:Create('Frame', {
@@ -481,7 +504,7 @@ do
         local SatVibMapInner = Library:Create('Frame', {
             BackgroundColor3 = Library.BackgroundColor;
             BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 18;
             Parent = SatVibMapOuter;
@@ -497,7 +520,7 @@ do
 
         local CursorOuter = Library:Create('ImageLabel', {
             AnchorPoint = Vector2.new(0.5, 0.5);
-            Size = UDim2.new(0, 8, 0, 8);
+            Size = UDim2.new(0, 6, 0, 6);
             BackgroundTransparency = 1;
             Image = 'http://www.roblox.com/asset/?id=9619665977';
             ImageColor3 = Color3.new(0, 0, 0);
@@ -510,7 +533,6 @@ do
             Position = UDim2.new(0, 1, 0, 1);
             BackgroundTransparency = 1;
             Image = 'http://www.roblox.com/asset/?id=9619665977';
-            ImageColor3 = Color3.new(1, 1, 1);
             ZIndex = 20;
             Parent = CursorOuter;
         })
@@ -535,8 +557,7 @@ do
             BackgroundColor3 = Color3.new(1, 1, 1);
             AnchorPoint = Vector2.new(0, 0.5);
             BorderColor3 = Color3.new(0, 0, 0);
-            BorderSizePixel = 1;
-            Size = UDim2.new(1, 0, 0, 2);
+            Size = UDim2.new(1, 0, 0, 1);
             ZIndex = 18;
             Parent = HueSelectorInner;
         });
@@ -552,7 +573,7 @@ do
         local HueBoxInner = Library:Create('Frame', {
             BackgroundColor3 = Library.MainColor;
             BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 18,
             Parent = HueBoxOuter;
@@ -611,7 +632,7 @@ do
             TransparencyBoxInner = Library:Create('Frame', {
                 BackgroundColor3 = ColorPicker.Value;
                 BorderColor3 = Library.OutlineColor;
-                BorderSizePixel = 1;
+                BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, 0, 1, 0);
                 ZIndex = 19;
                 Parent = TransparencyBoxOuter;
@@ -631,8 +652,7 @@ do
                 BackgroundColor3 = Color3.new(1, 1, 1);
                 AnchorPoint = Vector2.new(0.5, 0);
                 BorderColor3 = Color3.new(0, 0, 0);
-                BorderSizePixel = 1;
-                Size = UDim2.new(0, 2, 1, 0);
+                Size = UDim2.new(0, 1, 1, 0);
                 ZIndex = 21;
                 Parent = TransparencyBoxInner;
             });
@@ -663,8 +683,8 @@ do
 
             ContextMenu.Inner = Library:Create('Frame', {
                 BackgroundColor3 = Library.BackgroundColor;
-                BorderColor3 = Library.OutlineColor;
-                BorderSizePixel = 1;
+                BorderColor3 = Library.AccentColor;
+                BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.fromScale(1, 1);
                 ZIndex = 15;
                 Parent = ContextMenu.Container;
@@ -712,7 +732,7 @@ do
 
             Library:AddToRegistry(ContextMenu.Inner, {
                 BackgroundColor3 = 'BackgroundColor';
-                BorderColor3 = 'OutlineColor';
+                BorderColor3 = 'AccentColor';
             });
 
             function ContextMenu:Show()
@@ -777,7 +797,7 @@ do
 
         end
 
-        Library:AddToRegistry(PickerFrameInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
+        Library:AddToRegistry(PickerFrameInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'AccentColor'; });
         Library:AddToRegistry(Highlight, { BackgroundColor3 = 'AccentColor'; });
         Library:AddToRegistry(SatVibMapInner, { BackgroundColor3 = 'BackgroundColor'; BorderColor3 = 'OutlineColor'; });
 
@@ -994,7 +1014,7 @@ do
         local KeyPicker = {
             Value = Info.Default;
             Toggled = false;
-            Mode = Info.Mode or 'Toggle';
+            Mode = Info.Mode or 'Toggle'; -- Always, Toggle, Hold
             Type = 'KeyPicker';
             Callback = Info.Callback or function(Value) end;
             ChangedCallback = Info.ChangedCallback or function(New) end;
@@ -1017,8 +1037,8 @@ do
 
         local PickInner = Library:Create('Frame', {
             BackgroundColor3 = Library.BackgroundColor;
-            BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderColor3 = Library.AccentColor;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 7;
             Parent = PickOuter;
@@ -1026,7 +1046,7 @@ do
 
         Library:AddToRegistry(PickInner, {
             BackgroundColor3 = 'BackgroundColor';
-            BorderColor3 = 'OutlineColor';
+            BorderColor3 = 'AccentColor';
         });
 
         local DisplayLabel = Library:CreateLabel({
@@ -1053,8 +1073,8 @@ do
 
         local ModeSelectInner = Library:Create('Frame', {
             BackgroundColor3 = Library.BackgroundColor;
-            BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderColor3 = Library.AccentColor;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 15;
             Parent = ModeSelectOuter;
@@ -1062,7 +1082,7 @@ do
 
         Library:AddToRegistry(ModeSelectInner, {
             BackgroundColor3 = 'BackgroundColor';
-            BorderColor3 = 'OutlineColor';
+            BorderColor3 = 'AccentColor';
         });
 
         Library:Create('UIListLayout', {
@@ -1419,11 +1439,21 @@ do
 
             local Inner = Library:Create('Frame', {
                 BackgroundColor3 = Library.MainColor;
-                BorderColor3 = Library.OutlineColor;
-                BorderSizePixel = 1;
+                BorderColor3 = Library.AccentColor;
+                BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, 0, 1, 0);
                 ZIndex = 6;
                 Parent = Outer;
+            });
+
+            -- Glass effect
+            Library:Create('Frame', {
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+                BackgroundTransparency = 0.03;
+                BorderSizePixel = 0;
+                Size = UDim2.new(1, 0, 1, 0);
+                ZIndex = 1;
+                Parent = Inner;
             });
 
             local Label = Library:CreateLabel({
@@ -1434,13 +1464,22 @@ do
                 Parent = Inner;
             });
 
+            Library:Create('UIGradient', {
+                Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(212, 212, 212))
+                });
+                Rotation = 90;
+                Parent = Inner;
+            });
+
             Library:AddToRegistry(Outer, {
                 BorderColor3 = 'Black';
             });
 
             Library:AddToRegistry(Inner, {
                 BackgroundColor3 = 'MainColor';
-                BorderColor3 = 'OutlineColor';
+                BorderColor3 = 'AccentColor';
             });
 
             Library:OnHighlight(Outer, Outer,
@@ -1583,8 +1622,8 @@ do
 
         local DividerInner = Library:Create('Frame', {
             BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderColor3 = Library.AccentColor;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = DividerOuter;
@@ -1596,7 +1635,7 @@ do
 
         Library:AddToRegistry(DividerInner, {
             BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
+            BorderColor3 = 'AccentColor';
         });
 
         Groupbox:AddBlank(9);
@@ -1638,16 +1677,26 @@ do
 
         local TextBoxInner = Library:Create('Frame', {
             BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderColor3 = Library.AccentColor;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = TextBoxOuter;
         });
 
+        -- Glass effect
+        Library:Create('Frame', {
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+            BackgroundTransparency = 0.03;
+            BorderSizePixel = 0;
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 1;
+            Parent = TextBoxInner;
+        });
+
         Library:AddToRegistry(TextBoxInner, {
             BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
+            BorderColor3 = 'AccentColor';
         });
 
         Library:OnHighlight(TextBoxOuter, TextBoxOuter,
@@ -1658,6 +1707,15 @@ do
         if type(Info.Tooltip) == 'string' then
             Library:AddToolTip(Info.Tooltip, TextBoxOuter)
         end
+
+        Library:Create('UIGradient', {
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(212, 212, 212))
+            });
+            Rotation = 90;
+            Parent = TextBoxInner;
+        });
 
         local Container = Library:Create('Frame', {
             BackgroundTransparency = 1;
@@ -1801,7 +1859,7 @@ do
         local ToggleInner = Library:Create('Frame', {
             BackgroundColor3 = Library.MainColor;
             BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = ToggleOuter;
@@ -1958,10 +2016,20 @@ do
         local SliderInner = Library:Create('Frame', {
             BackgroundColor3 = Library.MainColor;
             BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = SliderOuter;
+        });
+
+        -- Glass effect
+        Library:Create('Frame', {
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+            BackgroundTransparency = 0.03;
+            BorderSizePixel = 0;
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 1;
+            Parent = SliderInner;
         });
 
         Library:AddToRegistry(SliderInner, {
@@ -2169,16 +2237,35 @@ do
 
         local DropdownInner = Library:Create('Frame', {
             BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderColor3 = Library.AccentColor;
+            BorderMode = Enum.BorderMode.Inset;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = DropdownOuter;
         });
 
+        -- Glass effect
+        Library:Create('Frame', {
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+            BackgroundTransparency = 0.03;
+            BorderSizePixel = 0;
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 1;
+            Parent = DropdownInner;
+        });
+
         Library:AddToRegistry(DropdownInner, {
             BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
+            BorderColor3 = 'AccentColor';
+        });
+
+        Library:Create('UIGradient', {
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(212, 212, 212))
+            });
+            Rotation = 90;
+            Parent = DropdownInner;
         });
 
         local DropdownArrow = Library:Create('ImageLabel', {
@@ -2236,17 +2323,27 @@ do
 
         local ListInner = Library:Create('Frame', {
             BackgroundColor3 = Library.MainColor;
-            BorderColor3 = Library.OutlineColor;
-            BorderSizePixel = 1;
+            BorderColor3 = Library.AccentColor;
+            BorderMode = Enum.BorderMode.Inset;
             BorderSizePixel = 0;
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 21;
             Parent = ListOuter;
         });
 
+        -- Glass effect for dropdown list
+        Library:Create('Frame', {
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+            BackgroundTransparency = 0.03;
+            BorderSizePixel = 0;
+            Size = UDim2.new(1, 0, 1, 0);
+            ZIndex = 1;
+            Parent = ListInner;
+        });
+
         Library:AddToRegistry(ListInner, {
             BackgroundColor3 = 'MainColor';
-            BorderColor3 = 'OutlineColor';
+            BorderColor3 = 'AccentColor';
         });
 
         local Scrolling = Library:Create('ScrollingFrame', {
@@ -2626,7 +2723,6 @@ do
     end;
 end;
 
--- < Create other UI elements >
 do
     Library.NotificationArea = Library:Create('Frame', {
         BackgroundTransparency = 1;
@@ -2655,10 +2751,20 @@ do
     local WatermarkInner = Library:Create('Frame', {
         BackgroundColor3 = Library.MainColor;
         BorderColor3 = Library.AccentColor;
-        BorderSizePixel = 1;
+        BorderMode = Enum.BorderMode.Inset;
         Size = UDim2.new(1, 0, 1, 0);
         ZIndex = 201;
         Parent = WatermarkOuter;
+    });
+
+    -- Glass effect for watermark
+    Library:Create('Frame', {
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+        BackgroundTransparency = 0.05;
+        BorderSizePixel = 0;
+        Size = UDim2.new(1, 0, 1, 0);
+        ZIndex = 1;
+        Parent = WatermarkInner;
     });
 
     Library:AddToRegistry(WatermarkInner, {
@@ -2705,8 +2811,6 @@ do
     Library.WatermarkText = WatermarkLabel;
     Library:MakeDraggable(Library.Watermark);
 
-
-
     local KeybindOuter = Library:Create('Frame', {
         AnchorPoint = Vector2.new(0, 0.5);
         BorderColor3 = Color3.new(0, 0, 0);
@@ -2719,16 +2823,26 @@ do
 
     local KeybindInner = Library:Create('Frame', {
         BackgroundColor3 = Library.MainColor;
-        BorderColor3 = Library.OutlineColor;
-        BorderSizePixel = 1;
+        BorderColor3 = Library.AccentColor;
+        BorderMode = Enum.BorderMode.Inset;
         Size = UDim2.new(1, 0, 1, 0);
         ZIndex = 101;
         Parent = KeybindOuter;
     });
 
+    -- Glass effect for keybinds
+    Library:Create('Frame', {
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+        BackgroundTransparency = 0.05;
+        BorderSizePixel = 0;
+        Size = UDim2.new(1, 0, 1, 0);
+        ZIndex = 1;
+        Parent = KeybindInner;
+    });
+
     Library:AddToRegistry(KeybindInner, {
         BackgroundColor3 = 'MainColor';
-        BorderColor3 = 'OutlineColor';
+        BorderColor3 = 'AccentColor';
     }, true);
 
     local ColorFrame = Library:Create('Frame', {
@@ -2746,7 +2860,7 @@ do
     local KeybindLabel = Library:CreateLabel({
         Size = UDim2.new(1, 0, 0, 20);
         Position = UDim2.fromOffset(5, 2),
-        TextXAlignment = Enum.TextXAlignment.Left,
+        TextXAlignment = Enum.TextXAlignment.Left;
 
         Text = 'Keybinds';
         ZIndex = 104;
@@ -2805,16 +2919,26 @@ function Library:Notify(Text, Time)
 
     local NotifyInner = Library:Create('Frame', {
         BackgroundColor3 = Library.MainColor;
-        BorderColor3 = Library.OutlineColor;
-        BorderSizePixel = 1;
+        BorderColor3 = Library.AccentColor;
+        BorderMode = Enum.BorderMode.Inset;
         Size = UDim2.new(1, 0, 1, 0);
         ZIndex = 101;
         Parent = NotifyOuter;
     });
 
+    -- Glass effect for notification
+    Library:Create('Frame', {
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+        BackgroundTransparency = 0.05;
+        BorderSizePixel = 0;
+        Size = UDim2.new(1, 0, 1, 0);
+        ZIndex = 1;
+        Parent = NotifyInner;
+    });
+
     Library:AddToRegistry(NotifyInner, {
         BackgroundColor3 = 'MainColor';
-        BorderColor3 = 'OutlineColor';
+        BorderColor3 = 'AccentColor';
     }, true);
 
     local InnerFrame = Library:Create('Frame', {
@@ -2918,16 +3042,37 @@ function Library:CreateWindow(...)
         Parent = ScreenGui;
     });
 
+    -- Main glass shadow effect
+    Library:Create('Frame', {
+        BackgroundColor3 = Color3.new(0, 0, 0);
+        BackgroundTransparency = 0.3;
+        BorderSizePixel = 0;
+        Position = UDim2.new(0, 5, 0, 5);
+        Size = UDim2.new(1, 0, 1, 0);
+        ZIndex = 0;
+        Parent = Outer;
+    });
+
     Library:MakeDraggable(Outer, 25);
 
     local Inner = Library:Create('Frame', {
         BackgroundColor3 = Library.MainColor;
         BorderColor3 = Library.AccentColor;
-        BorderSizePixel = 1;
+        BorderMode = Enum.BorderMode.Inset;
         Position = UDim2.new(0, 1, 0, 1);
         Size = UDim2.new(1, -2, 1, -2);
         ZIndex = 1;
         Parent = Outer;
+    });
+
+    -- Main glass effect
+    Library:Create('Frame', {
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
+        BackgroundTransparency = 0.05;
+        BorderSizePixel = 0;
+        Size = UDim2.new(1, 0, 1, 0);
+        ZIndex = 2;
+        Parent = Inner;
     });
 
     Library:AddToRegistry(Inner, {
@@ -2961,7 +3106,7 @@ function Library:CreateWindow(...)
     local MainSectionInner = Library:Create('Frame', {
         BackgroundColor3 = Library.BackgroundColor;
         BorderColor3 = Color3.new(0, 0, 0);
-        BorderSizePixel = 1;
+        BorderMode = Enum.BorderMode.Inset;
         Position = UDim2.new(0, 0, 0, 0);
         Size = UDim2.new(1, 0, 1, 0);
         ZIndex = 1;
@@ -2995,7 +3140,6 @@ function Library:CreateWindow(...)
         ZIndex = 2;
         Parent = MainSectionInner;
     });
-    
 
     Library:AddToRegistry(TabContainer, {
         BackgroundColor3 = 'MainColor';
@@ -3136,7 +3280,7 @@ function Library:CreateWindow(...)
             local BoxOuter = Library:Create('Frame', {
                 BackgroundColor3 = Library.BackgroundColor;
                 BorderColor3 = Library.OutlineColor;
-                BorderSizePixel = 1;
+                BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, 0, 0, 507 + 2);
                 ZIndex = 2;
                 Parent = Info.Side == 1 and LeftSide or RightSide;
@@ -3235,7 +3379,7 @@ function Library:CreateWindow(...)
             local BoxOuter = Library:Create('Frame', {
                 BackgroundColor3 = Library.BackgroundColor;
                 BorderColor3 = Library.OutlineColor;
-                BorderSizePixel = 1;
+                BorderMode = Enum.BorderMode.Inset;
                 Size = UDim2.new(1, 0, 0, 0);
                 ZIndex = 2;
                 Parent = Info.Side == 1 and LeftSide or RightSide;
