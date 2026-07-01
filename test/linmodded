@@ -29,18 +29,19 @@ local Library = {
 
     HudRegistry = {};
 
-    -- Modern Dark Theme with Glass Effect
-    FontColor = Color3.fromRGB(220, 220, 230);
-    MainColor = Color3.fromRGB(30, 30, 35);
-    BackgroundColor = Color3.fromRGB(20, 20, 25);
-    AccentColor = Color3.fromRGB(100, 140, 255);
-    AccentColor2 = Color3.fromRGB(180, 100, 255);
-    OutlineColor = Color3.fromRGB(45, 45, 55);
-    RiskColor = Color3.fromRGB(255, 80, 80),
-    GlassColor = Color3.fromRGB(255, 255, 255);
+    -- Dark Cyberpunk Theme
+    FontColor = Color3.fromRGB(200, 200, 210);
+    FontColor2 = Color3.fromRGB(160, 160, 170);
+    MainColor = Color3.fromRGB(13, 13, 18);
+    BackgroundColor = Color3.fromRGB(8, 8, 12);
+    AccentColor = Color3.fromRGB(0, 180, 255);
+    AccentColor2 = Color3.fromRGB(180, 0, 255);
+    OutlineColor = Color3.fromRGB(30, 30, 40);
+    RiskColor = Color3.fromRGB(255, 50, 50);
+    SuccessColor = Color3.fromRGB(0, 255, 150);
     
     Black = Color3.new(0, 0, 0);
-    Font = Enum.Font.Gotham;
+    Font = Enum.Font.SourceSans;
 
     OpenedFrames = {};
     DependencyBoxes = {};
@@ -153,6 +154,7 @@ function Library:CreateLabel(Properties, IsHud)
         TextColor3 = Library.FontColor;
         TextSize = 16;
         TextStrokeTransparency = 0;
+        TextScaled = false;
     });
 
     Library:ApplyTextStroke(_Instance);
@@ -199,17 +201,17 @@ function Library:AddToolTip(InfoStr, HoverInstance)
         BorderColor3 = Library.AccentColor,
         BorderMode = Enum.BorderMode.Inset,
 
-        Size = UDim2.fromOffset(X + 10, Y + 6),
+        Size = UDim2.fromOffset(X + 12, Y + 8),
         ZIndex = 100,
         Parent = Library.ScreenGui,
 
         Visible = false,
     })
 
-    -- Add glass effect
+    -- Dark border glow
     Library:Create('Frame', {
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-        BackgroundTransparency = 0.05;
+        BackgroundColor3 = Library.AccentColor;
+        BackgroundTransparency = 0.1;
         BorderSizePixel = 0;
         Size = UDim2.new(1, 0, 1, 0);
         ZIndex = 1;
@@ -217,7 +219,7 @@ function Library:AddToolTip(InfoStr, HoverInstance)
     });
 
     local Label = Library:CreateLabel({
-        Position = UDim2.fromOffset(5, 2),
+        Position = UDim2.fromOffset(6, 3),
         Size = UDim2.fromOffset(X, Y);
         TextSize = 14;
         Text = InfoStr,
@@ -326,7 +328,7 @@ end;
 
 function Library:GetDarkerColor(Color)
     local H, S, V = Color3.toHSV(Color);
-    return Color3.fromHSV(H, S, math.max(0, V / 1.8));
+    return Color3.fromHSV(H, S, math.max(0, V / 2));
 end;
 Library.AccentColorDark = Library:GetDarkerColor(Library.AccentColor);
 
@@ -473,16 +475,6 @@ do
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 16;
             Parent = PickerFrameOuter;
-        });
-
-        -- Glass effect
-        Library:Create('Frame', {
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-            BackgroundTransparency = 0.03;
-            BorderSizePixel = 0;
-            Size = UDim2.new(1, 0, 1, 0);
-            ZIndex = 1;
-            Parent = PickerFrameInner;
         });
 
         local Highlight = Library:Create('Frame', {
@@ -1014,7 +1006,7 @@ do
         local KeyPicker = {
             Value = Info.Default;
             Toggled = false;
-            Mode = Info.Mode or 'Toggle'; -- Always, Toggle, Hold
+            Mode = Info.Mode or 'Toggle';
             Type = 'KeyPicker';
             Callback = Info.Callback or function(Value) end;
             ChangedCallback = Info.ChangedCallback or function(New) end;
@@ -1446,16 +1438,6 @@ do
                 Parent = Outer;
             });
 
-            -- Glass effect
-            Library:Create('Frame', {
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-                BackgroundTransparency = 0.03;
-                BorderSizePixel = 0;
-                Size = UDim2.new(1, 0, 1, 0);
-                ZIndex = 1;
-                Parent = Inner;
-            });
-
             local Label = Library:CreateLabel({
                 Size = UDim2.new(1, 0, 1, 0);
                 TextSize = 14;
@@ -1682,16 +1664,6 @@ do
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 6;
             Parent = TextBoxOuter;
-        });
-
-        -- Glass effect
-        Library:Create('Frame', {
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-            BackgroundTransparency = 0.03;
-            BorderSizePixel = 0;
-            Size = UDim2.new(1, 0, 1, 0);
-            ZIndex = 1;
-            Parent = TextBoxInner;
         });
 
         Library:AddToRegistry(TextBoxInner, {
@@ -2022,16 +1994,6 @@ do
             Parent = SliderOuter;
         });
 
-        -- Glass effect
-        Library:Create('Frame', {
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-            BackgroundTransparency = 0.03;
-            BorderSizePixel = 0;
-            Size = UDim2.new(1, 0, 1, 0);
-            ZIndex = 1;
-            Parent = SliderInner;
-        });
-
         Library:AddToRegistry(SliderInner, {
             BackgroundColor3 = 'MainColor';
             BorderColor3 = 'OutlineColor';
@@ -2244,16 +2206,6 @@ do
             Parent = DropdownOuter;
         });
 
-        -- Glass effect
-        Library:Create('Frame', {
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-            BackgroundTransparency = 0.03;
-            BorderSizePixel = 0;
-            Size = UDim2.new(1, 0, 1, 0);
-            ZIndex = 1;
-            Parent = DropdownInner;
-        });
-
         Library:AddToRegistry(DropdownInner, {
             BackgroundColor3 = 'MainColor';
             BorderColor3 = 'AccentColor';
@@ -2329,16 +2281,6 @@ do
             Size = UDim2.new(1, 0, 1, 0);
             ZIndex = 21;
             Parent = ListOuter;
-        });
-
-        -- Glass effect for dropdown list
-        Library:Create('Frame', {
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-            BackgroundTransparency = 0.03;
-            BorderSizePixel = 0;
-            Size = UDim2.new(1, 0, 1, 0);
-            ZIndex = 1;
-            Parent = ListInner;
         });
 
         Library:AddToRegistry(ListInner, {
@@ -2757,16 +2699,6 @@ do
         Parent = WatermarkOuter;
     });
 
-    -- Glass effect for watermark
-    Library:Create('Frame', {
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-        BackgroundTransparency = 0.05;
-        BorderSizePixel = 0;
-        Size = UDim2.new(1, 0, 1, 0);
-        ZIndex = 1;
-        Parent = WatermarkInner;
-    });
-
     Library:AddToRegistry(WatermarkInner, {
         BorderColor3 = 'AccentColor';
     });
@@ -2828,16 +2760,6 @@ do
         Size = UDim2.new(1, 0, 1, 0);
         ZIndex = 101;
         Parent = KeybindOuter;
-    });
-
-    -- Glass effect for keybinds
-    Library:Create('Frame', {
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-        BackgroundTransparency = 0.05;
-        BorderSizePixel = 0;
-        Size = UDim2.new(1, 0, 1, 0);
-        ZIndex = 1;
-        Parent = KeybindInner;
     });
 
     Library:AddToRegistry(KeybindInner, {
@@ -2924,16 +2846,6 @@ function Library:Notify(Text, Time)
         Size = UDim2.new(1, 0, 1, 0);
         ZIndex = 101;
         Parent = NotifyOuter;
-    });
-
-    -- Glass effect for notification
-    Library:Create('Frame', {
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-        BackgroundTransparency = 0.05;
-        BorderSizePixel = 0;
-        Size = UDim2.new(1, 0, 1, 0);
-        ZIndex = 1;
-        Parent = NotifyInner;
     });
 
     Library:AddToRegistry(NotifyInner, {
@@ -3042,13 +2954,13 @@ function Library:CreateWindow(...)
         Parent = ScreenGui;
     });
 
-    -- Main glass shadow effect
+    -- Outer glow effect
     Library:Create('Frame', {
-        BackgroundColor3 = Color3.new(0, 0, 0);
-        BackgroundTransparency = 0.3;
+        BackgroundColor3 = Library.AccentColor;
+        BackgroundTransparency = 0.05;
         BorderSizePixel = 0;
-        Position = UDim2.new(0, 5, 0, 5);
-        Size = UDim2.new(1, 0, 1, 0);
+        Position = UDim2.new(0, -2, 0, -2);
+        Size = UDim2.new(1, 4, 1, 4);
         ZIndex = 0;
         Parent = Outer;
     });
@@ -3063,16 +2975,6 @@ function Library:CreateWindow(...)
         Size = UDim2.new(1, -2, 1, -2);
         ZIndex = 1;
         Parent = Outer;
-    });
-
-    -- Main glass effect
-    Library:Create('Frame', {
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255);
-        BackgroundTransparency = 0.05;
-        BorderSizePixel = 0;
-        Size = UDim2.new(1, 0, 1, 0);
-        ZIndex = 2;
-        Parent = Inner;
     });
 
     Library:AddToRegistry(Inner, {
