@@ -1,0 +1,75 @@
+local CoreGui = cloneref(game:GetService("CoreGui"))
+local HttpService = cloneref(game:GetService("HttpService"))
+
+local CustomFonts = {
+    Tahoma = { url = "https://raw.githubusercontent.com/k0nkx/UI-Lib-Tuff/refs/heads/main/fonts/Draff.ttf" }
+}
+
+local function LoadCustomFont(fontName)
+    local fontData = CustomFonts[fontName]
+    if not fontData then return nil end
+    
+    local fileName = fontName .. ".ttf"
+    local fontFileName = fontName .. ".font"
+    
+    -- 1. Download the font if it doesn't exist locally
+    if not isfile(fileName) then
+        local success, result = pcall(function()
+            return game:HttpGet(fontData.url)
+        end)
+        if success and result then
+            writefile(fileName, result)
+        else
+            return nil
+        end
+    end
+    
+    -- 2. Create the .font JSON configuration
+    local fontConfig = {
+        name = fontName,
+        faces = {{
+            name = "Regular",
+            weight = 400,
+            style = "normal",
+            assetId = getcustomasset(fileName)
+        }}
+    }
+    writefile(fontFileName, HttpService:JSONEncode(fontConfig))
+    
+    -- 3. Create and return the Font object
+    local success, font = pcall(function()
+        return Font.new(getcustomasset(fontFileName), Enum.FontWeight.Regular)
+    end)
+    
+    return success and font or nil
+end
+
+-- Create the ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "CustomFontExample"
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
+
+-- Create the TextLabel in the exact center of the screen
+local TextLabel = Instance.new("TextLabel")
+TextLabel.Size = UDim2.new(0, 500, 0, 60)
+TextLabel.Position = UDim2.new(0.5, 0, 0.5, 0) -- 50% X, 50% Y
+TextLabel.AnchorPoint = Vector2.new(0.5, 0.5)   -- Centers the anchor
+TextLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TextLabel.BorderSizePixel = 0
+TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TextLabel.TextSize = 28
+TextLabel.Text = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+TextLabel.Parent = ScreenGui
+
+-- Load and apply the custom font
+local tahomaFont = LoadCustomFont("Tahoma")
+
+if tahomaFont then
+    TextLabel.FontFace = tahomaFont
+    print("Custom Tahoma font loaded successfully!")
+else
+    TextLabel.Font = Enum.Font.SourceSans
+    warn("Failed to load custom font. Used default font instead.")
+end
