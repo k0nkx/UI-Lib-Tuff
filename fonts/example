@@ -2,7 +2,7 @@ local CoreGui = cloneref(game:GetService("CoreGui"))
 local HttpService = cloneref(game:GetService("HttpService"))
 
 local CustomFonts = {
-    Tahoma = { url = "https://raw.githubusercontent.com/k0nkx/UI-Lib-Tuff/refs/heads/main/fonts/Draff.ttf" }
+    Draff = { url = "https://github.com/k0nkx/UI-Lib-Tuff/raw/refs/heads/main/fonts/Draff.ttf" }
 }
 
 local function LoadCustomFont(fontName)
@@ -46,29 +46,29 @@ end
 
 -- Create the ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "CustomFontExample"
+ScreenGui.Name = "DraffFontExample"
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
 
 -- Create the TextLabel in the exact center of the screen
 local TextLabel = Instance.new("TextLabel")
-TextLabel.Size = UDim2.new(0, 500, 0, 60)
+TextLabel.Size = UDim2.new(0, 600, 0, 80)
 TextLabel.Position = UDim2.new(0.5, 0, 0.5, 0) -- 50% X, 50% Y
-TextLabel.AnchorPoint = Vector2.new(0.5, 0.5)   -- Centers the anchor
-TextLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+TextLabel.AnchorPoint = Vector2.new(0.5, 0.5)   -- Centers the element
+TextLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 TextLabel.BorderSizePixel = 0
 TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TextLabel.TextSize = 28
+TextLabel.TextSize = 36
 TextLabel.Text = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 TextLabel.Parent = ScreenGui
 
--- Load and apply the custom font
-local tahomaFont = LoadCustomFont("Tahoma")
+-- Load and apply the custom Draff font
+local draffFont = LoadCustomFont("Draff")
 
-if tahomaFont then
-    TextLabel.FontFace = tahomaFont
-    print("Custom Tahoma font loaded successfully!")
+if draffFont then
+    TextLabel.FontFace = draffFont
+    print("Custom Draff font loaded successfully!")
 else
     TextLabel.Font = Enum.Font.SourceSans
     warn("Failed to load custom font. Used default font instead.")
