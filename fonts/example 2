@@ -84,7 +84,7 @@ stroke.Parent = TextLabel
 
 local customFont = LoadCustomFont(
     "Smallest Pixel-7", 
-    "https://github.com/i77lhm/storage/raw/refs/heads/main/fonts/smallest_pixel-7.ttf"
+    "https://raw.githubusercontent.com/k0nkx/UI-Lib-Tuff/refs/heads/main/fonts/smallest_pixel-7.ttf"
 )
 
 if customFont then
