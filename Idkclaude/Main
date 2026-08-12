@@ -1,0 +1,356 @@
+-- sorry u get bad code cuz i wasnt paid to make this :p this should work for basic use cases tho
+local lib = {
+	ui = nil;
+	theme = nil;
+
+	hotkey = Enum.KeyCode.Tab;
+
+	methods = {};
+	elements = {};
+	subelements = {};
+	['BROWENðŸ˜‚ðŸ˜‚'] = {};
+
+	presets = {
+		def = {
+			accent = Color3.fromRGB(255, 0, 245);
+
+			bg = Color3.fromRGB(255, 255, 255);
+			fg = Color3.fromRGB(245, 245, 245);
+
+			il = Color3.fromRGB(30, 30, 30);
+			ol = Color3.fromRGB(10, 10, 10);
+
+			t = Color3.fromRGB(255, 255, 255);
+			t2 = Color3.fromRGB(200, 200, 200);
+		};
+	};
+}
+
+lib.theme = lib.presets.def
+local Client = game:GetService('Players').LocalPlayer;
+local Mouse = Client:GetMouse();
+
+lib.subelements.__index = lib.subelements;
+lib.elements.__index = lib.elements;
+lib.methods.__index = lib.methods;
+lib.__index = lib;
+
+local function new(class: string, properties: {}?, attributes: {}?): Instance | boolean
+	local success, instance = pcall(Instance.new, class)
+
+	if not success then
+		return false
+	end
+
+	if properties then
+		for key, value in next, properties do
+			local succ, err = pcall(function()
+				(instance :: any)[key] = value
+			end)
+
+			if not succ then
+				warn(err, properties.Name)
+				return nil
+			end
+		end
+	end
+
+	if attributes then
+		for key, value in next, (attributes) do
+			instance:SetAttribute(key, value)
+		end
+	end
+
+	return instance
+end
+
+function lib:overwrite(T1 : {}, T2 : {}) : {}
+	for i, v in next, (T2) do
+		T1[i] = type(v) == 'table' and lib:overwrite(T1[i] or {}, v) or v
+	end
+
+	return T1 or nil
+end
+
+function lib:closetasks(t : {})
+	for _, link in next,t do
+		if typeof(link) == 'RBXScriptConnection' then
+			link:Disconnect();
+		else
+			pcall(function()
+				task.cancel(link)
+			end)
+		end
+	end
+end
+
+function lib:coloredit(color : Color3, number : number) : Color3
+	local h, s, v = color:ToHSV()
+	v = math.clamp(v + (number / 255), 0, 1)
+	return Color3.fromHSV(h, s, v)
+end
+
+function lib:validinput(i)
+	return table.find({
+		Enum.UserInputType.MouseMovement;
+		Enum.UserInputType.MouseButton1;
+		Enum.UserInputType.Touch;
+	}, i.UserInputType)
+end
+
+lib.ui = new("ScreenGui", { Parent = game:GetService('RunService'):IsStudio() and Client.PlayerGui or game.CoreGui, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,})
+
+function lib.elements:butt(...)
+	local Element = lib:overwrite({
+		text = 'Text';
+		icon = 'rbxassetid://0';
+		call = print;
+	}, ... or {})
+
+	Element['im secretly a gay furry femboy but nobodys gonna read this so my secret is safe'] = new("TextButton", { Parent = self.doomdtw_is_so_cute; BackgroundColor3 = Color3.fromRGB(255, 255, 255); BorderColor3 = Color3.fromRGB(0, 0, 0); BorderSizePixel = 0; FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal); Size = UDim2.new(1, 0, 0, 16); Text = ''; TextColor3 = Color3.fromRGB(0, 0, 0); TextSize = 14; }) :: TextButton 
+	new("UIGradient", { Parent = Element['im secretly a gay furry femboy but nobodys gonna read this so my secret is safe']; Color =ColorSequence.new{ ColorSequenceKeypoint.new(0, Color3.fromRGB(24, 24, 24)), ColorSequenceKeypoint.new(1, Color3.fromRGB(18, 18, 18)) }; Rotation = 90; }) 
+	new("UIStroke", { Parent = Element['im secretly a gay furry femboy but nobodys gonna read this so my secret is safe']; ApplyStrokeMode = Enum.ApplyStrokeMode.Border; }) 
+	new("TextLabel", { Parent = Element['im secretly a gay furry femboy but nobodys gonna read this so my secret is safe']; BackgroundColor3 = Color3.fromRGB(255, 255, 255); BackgroundTransparency = 1; BorderColor3 = Color3.fromRGB(0, 0, 0); BorderSizePixel = 0; FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal); Size = UDim2.fromScale(1, 1); Text = Element.text; TextColor3 = Color3.fromRGB(200, 200, 200); TextSize = 14; }) 
+
+	Element['im secretly a gay furry femboy but nobodys gonna read this so my secret is safe'].Activated:Connect(Element.call)
+
+	return Element
+end
+
+function lib.elements:baee(...)
+	local BRUUUUUUUUUUUUUUUUUUUUUUUUUULOLOLOLOKLOLOKLOOKOKOLJKASDLJKNASJKCNXILJNI = lib:overwrite({
+		text = 'browen';
+		doomdtw_is_so_cute = nil;
+	}, ... or {})
+
+	local base = new("Frame", { Parent = self.doomdtw_is_so_cute; Name = "base"; AutomaticSize =Enum.AutomaticSize.Y; BackgroundColor3 = Color3.fromRGB(20, 20, 20); BackgroundTransparency = 1; BorderColor3 = Color3.fromRGB(0, 0, 0); BorderSizePixel = 0; Size = UDim2.new(1, 0, 0, 6); }) :: Frame 
+	local top = new("Frame", { Parent = base; Name = "top"; BackgroundColor3 = Color3.fromRGB(255, 255, 255); BackgroundTransparency = 1; BorderColor3 = Color3.fromRGB(0, 0, 0); BorderSizePixel = 0; LayoutOrder = -1; Size = UDim2.new(1, 0, 0, 8); }) :: Frame 
+	local LeftC = new("Frame", { Parent = top; Name = "LeftC"; BackgroundColor3 = Color3.fromRGB(255, 255, 255); BackgroundTransparency = 1; BorderColor3 = Color3.fromRGB(0, 0, 0); BorderSizePixel = 0; Position = UDim2.fromOffset(-16, 0); Size = UDim2.new(0, 20, 1, 0); }) :: Frame 
+	local label = new("TextLabel", { Parent = LeftC; Name = "label"; AutomaticSize =Enum.AutomaticSize.X; BackgroundColor3 = Color3.fromRGB(255, 255, 255); BackgroundTransparency = 1; BorderColor3 = Color3.fromRGB(0, 0, 0); BorderSizePixel = 0; FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal); Size = UDim2.fromScale(0, 1); Text = BRUUUUUUUUUUUUUUUUUUUUUUUUUULOLOLOLOKLOLOKLOOKOKOLJKASDLJKNASJKCNXILJNI.text; TextColor3 = Color3.fromRGB(200, 200, 200); TextSize = 14; }) :: TextLabel 
+	local RightC = new("Frame", { Parent = top; Name = "RightC"; AnchorPoint = Vector2.new(1, 0); BackgroundColor3 = Color3.fromRGB(18, 18, 18); BorderColor3 = Color3.fromRGB(0, 0, 0); BorderSizePixel = 0; Position = UDim2.new(1, 22, 0, 0); Size = UDim2.fromScale(0, 1); }) :: Frame 
+	new("UIListLayout", { Parent = LeftC; FillDirection =Enum.FillDirection.Horizontal; Padding =UDim.new(0, 6); SortOrder = Enum.SortOrder.LayoutOrder; }) 
+	new("UIPadding", { Parent = label; PaddingBottom =UDim.new(0, 2); }) 
+	new("UIListLayout", { Parent = RightC; FillDirection =Enum.FillDirection.Horizontal; HorizontalAlignment = Enum.HorizontalAlignment.Right; Padding =UDim.new(0, 24); SortOrder = Enum.SortOrder.LayoutOrder; }) 
+	new("UIListLayout", { Parent = base; Padding =UDim.new(0, 5); SortOrder = Enum.SortOrder.LayoutOrder; });
+
+	local Placeholder = new("Frame", { Parent = LeftC; Name = "Placeholder"; BackgroundColor3 = Color3.fromRGB(255, 255, 255); BackgroundTransparency = 1; BorderColor3 = Color3.fromRGB(0, 0, 0); BorderSizePixel = 0; LayoutOrder = -1; Size = UDim2.fromScale(1, 1); }) :: Frame 
+	new("UIAspectRatioConstraint", { Parent = Placeholder; }) 
+
+	BRUUUUUUUUUUUUUUUUUUUUUUUUUULOLOLOLOKLOLOKLOOKOKOLJKASDLJKNASJKCNXILJNI.c1 = LeftC;
+	BRUUUUUUUUUUUUUUUUUUUUUUUUUULOLOLOLOKLOLOKLOOKOKOLJKASDLJKNASJKCNXILJNI.c2 = RightC;
+	BRUUUUUUUUUUUUUUUUUUUUUUUUUULOLOLOLOKLOLOKLOOKOKOLJKASDLJKNASJKCNXILJNI.c3 = base;
+	BRUUUUUUUUUUUUUUUUUUUUUUUUUULOLOLOLOKLOLOKLOOKOKOLJKASDLJKNASJKCNXILJNI.tron = Placeholder
+
+	setmetatable(BRUUUUUUUUUUUUUUUUUUUUUUUUUULOLOLOLOKLOLOKLOOKOKOLJKASDLJKNASJKCNXILJNI, lib.subelements)
+	return BRUUUUUUUUUUUUUUUUUUUUUUUUUULOLOLOLOKLOLOKLOOKOKOLJKASDLJKNASJKCNXILJNI	
+end
+
+function lib.subelements:addtog(...)
+	local ElementData = lib:overwrite({
+		text = 'Toggle';
+		val = false;
+		call = function()
+		end,
+	}, ... or {})
+
+	if self.tron then
+		self.tron:Destroy();
+		self.tron = nil;
+	end
+
+	local doomdtwlololololololo = new("TextButton", { Parent = self.c1; Name = "doomdtwlololololololo"; LayoutOrder = -999; AutoButtonColor = false; BackgroundColor3 = Color3.fromRGB(18, 18, 18); BorderColor3 = Color3.fromRGB(0, 0, 0); BorderSizePixel = 0; FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal); Size = UDim2.fromScale(1, 1); Text = ""; TextColor3 = Color3.fromRGB(0, 0, 0); TextSize = 14; }) :: TextButton 
+	new("UIAspectRatioConstraint", { Parent = doomdtwlololololololo; }) 
+	new("UIStroke", { Parent = doomdtwlololololololo; ApplyStrokeMode = Enum.ApplyStrokeMode.Border; }) 
+
+	function ElementData:Set(Value : boolean)
+		if ElementData.Children then
+			ContainerFrame.Visible = Value;
+		end
+
+		doomdtwlololololololo.BackgroundColor3 = Value and (lib.theme.accent) or (Color3.fromRGB(18,18,18))
+		ElementData.val = Value;
+		ElementData.call(Value);
+	end
+
+	doomdtwlololololololo.Activated:Connect(function()
+		ElementData:Set(not ElementData.val);
+	end)
+
+	ElementData:Set(ElementData.val);
+
+	setmetatable(ElementData, lib.SubElements);
+	return ElementData
+end
+
+function lib.subelements:addkiki(...)
+	-- BOIIIIIII KIKI DO U LOVE MEEEEEEEEEEðŸ˜‚ðŸ˜‚ðŸ˜‚ðŸ˜‚ðŸ˜‚ðŸ˜‚ðŸ˜‚ðŸ˜‚ðŸ˜‚ðŸ§…ðŸ§…
+	local ElementData = lib:overwrite({
+		text = 'browne';
+		mode = "Click";
+		val = nil;
+
+		changed = function() end;
+		call = function() end;
+		active = false;
+	}, ... or {})
+	setmetatable(ElementData, lib.subelements)
+
+	local ElementButton = new("TextButton", { Parent = self.c2, AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Color3.fromRGB(18, 18, 18), BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), Size = UDim2.fromScale(1, 1), Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 14, TextTransparency = 1, }) :: TextButton 
+	local ButtonLabel = new("TextLabel", { Parent = ElementButton, AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 1, BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), Size = UDim2.fromScale(0, 1), Text = "...", TextColor3 = Color3.fromRGB(152, 152, 152), TextSize = 14, }) 
+	new("UIStroke", { Parent = ElementButton, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, }) 
+	new("UIStroke", { Parent = ElementButton, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, BorderStrokePosition = Enum.BorderStrokePosition.Inner, Color = Color3.fromRGB(28, 28, 28), }) 
+	new("UIPadding", { Parent = ElementButton, PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), }) 
+
+	local function gsub(e)
+		return tostring(e)
+			:gsub('Enum%.KeyCode%.', '')
+			:gsub('Enum%.UserInputType%.', '')
+			:gsub('ouse', '')
+			:gsub('utton', '')
+	end
+
+	function ElementData:Set(eeeee : string)
+		local Blacklist = {
+			'RightSuper',
+			'LeftSuper',
+			'BackSlash',
+			'Backspace',
+			'Unknown',
+			'Return',
+			'Escape',
+		}
+
+		if eeeee == nil then
+			ButtonLabel.Text = '?'
+			ElementData.val = nil
+			return
+		end
+
+		local stripped = gsub(eeeee)
+
+		if table.find(Blacklist, stripped) then
+			ButtonLabel.Text = '?'
+			ElementData.val = nil
+			return
+		end
+
+		ButtonLabel.Text = gsub(eeeee)
+		ElementData.val = gsub(eeeee) 
+	end
+
+	ElementButton.Activated:Connect(function()
+		ElementData.Editing = true
+		ButtonLabel.Text = '...'
+	end)
+
+	local KeybindBeginTask = game:GetService('UserInputService').InputBegan:Connect(function(Input, GameProcessedEvent)
+		if GameProcessedEvent and not ElementData.Editing then
+			return
+		end
+
+		if ElementData.Editing then
+			ElementData:Set(Input.UserInputType ==Enum.UserInputType.Keyboard and gsub(Input.KeyCode) or gsub(Input.UserInputType))
+			ElementData.Editing = false;
+			return
+		end
+
+		if gsub(Input.KeyCode) == ElementData.val or gsub(Input.UserInputType) == ElementData.val then
+			if ElementData.mode == 'Hold' then
+				ElementData.pressed = true
+				ElementData.active = true
+
+				while ElementData.pressed do task.wait()
+					local _, CallFailure = pcall(function()
+						ElementData.call(ElementData.val)
+					end)
+
+					if CallFailure then warn(CallFailure) end
+				end
+			elseif ElementData.mode == 'Toggle' then
+				ElementData.pressed = not ElementData.pressed
+				ElementData.active = ElementData.pressed
+				while ElementData.pressed do task.wait()
+					local _, CallFailure = pcall(function()
+						ElementData.call(ElementData.val)
+					end)
+
+					if CallFailure then warn(CallFailure) end
+				end
+			elseif ElementData.mode == 'Click' then
+				ElementData.active = true
+				local _, CallFailure = pcall(function()
+					ElementData.call(ElementData.val)
+				end)
+
+				if CallFailure then warn(CallFailure) end
+			end
+		end
+	end)
+
+	local KeybindEndTask = game:GetService('UserInputService').InputEnded:Connect(function(Input, GPE)
+		if not GPE then
+			if (gsub(Input.KeyCode) == ElementData.val or gsub(Input.UserInputType) == ElementData.val) and ElementData.mode == 'Hold' then
+				ElementData.pressed = false
+				ElementData.active = false
+			end
+
+			if (gsub(Input.KeyCode) == ElementData.val or gsub(Input.UserInputType) == ElementData.val) and ElementData.mode == 'Click' then
+				ElementData.active = false
+			end
+		end
+	end)
+
+	ElementData:Set(ElementData.val)
+end
+
+function lib.subelements:addtscolor(...)
+	local ElementData = lib:overwrite({
+		Instance = nil;
+		Float = nil;
+		Draggable = true;
+		Dropped = false;
+		Colors = {};
+
+		text = 'Color Picker';
+		val = Color3.fromRGB(255, 255, 255);
+		alpha = 1;
+		call = function() end;
+	}, ... or {})
+
+	local ElementButton = new("TextButton", { Parent = self.c2, BackgroundColor3 = Color3.fromRGB(255, 0, 245), BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), Size = UDim2.new(0, 19, 1, 0), Text = "", TextColor3 = Color3.fromRGB(255, 255, 255), TextSize = 14, TextTransparency = 1, }) :: TextButton 
+	new("UIStroke", { Parent = ElementButton, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, }) 
+	new("UIPadding", { Parent = ElementButton, PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5), }) 
+	new("UIGradient", { Parent = ElementButton, Color = ColorSequence.new{ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(152, 152, 152)) }, Rotation = 90, }) 
+
+	local PreviewButton = ElementButton
+
+	local ColorPickerFrame = new("Frame", { Parent = lib.ui, Visible = false; Name = "ColorPickerFrame", BackgroundColor3 = Color3.fromRGB(13, 13, 13), BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Position = UDim2.fromScale(0.7144556641578674, 0.4033333361148834), Size = UDim2.fromOffset(180, 180), }) :: Frame 
+	local ColorMap = new("Frame", { Parent = ColorPickerFrame, Name = "Map", BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Size = UDim2.fromOffset(150, 150), }) :: Frame 
+	local SatMap = new("Frame", { Parent = ColorMap, Name = "SatMap", BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), }) :: Frame 
+	local ValMap = new("Frame", { Parent = ColorMap, Name = "ValMap", BackgroundColor3 = Color3.fromRGB(0, 0, 0), BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), }) :: Frame 
+	local ColorMarker = new("Frame", { Parent = ColorMap, Name = "MapMarker", BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 1, BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Size = UDim2.fromOffset(4, 4), }) :: Frame 
+	local HueBar = new("Frame", { Parent = ColorPickerFrame, Name = "Hue", AnchorPoint = Vector2.new(1, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Position = UDim2.fromScale(1, 0), Size = UDim2.new(1, -155, 1, -18), }) :: Frame 
+	local HueMarker = new("Frame", { Parent = HueBar, Name = "HueMarker", AnchorPoint = Vector2.new(1, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 1, BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Position = UDim2.fromScale(1, 0), Size = UDim2.new(1, 0, 0, 7), }) :: Frame 
+	local AlphaBar = new("Frame", { Parent = ColorPickerFrame, Name = "Alp", AnchorPoint = Vector2.new(0, 1), BackgroundColor3 = Color3.fromRGB(18, 18, 18), BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, -18, 1, -155), }) :: Frame 
+	local AlphaFill = new("Frame", { Parent = AlphaBar, Name = "SatMap", BackgroundColor3 = Color3.fromRGB(255, 0, 4), BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Size = UDim2.fromScale(1, 1), }) :: Frame 
+	local AlphaMarker = new("Frame", { Parent = AlphaBar, Name = "AlpMarker", ZIndex = 999; AnchorPoint = Vector2.new(1, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 1, BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, Position = UDim2.fromScale(1, 0), Size = UDim2.new(0, 7, 1, 0), }) :: Frame 
+	local CopyButton = new("TextButton", { Parent = ColorPickerFrame, AnchorPoint = Vector2.new(1, 1), BackgroundColor3 = Color3.fromRGB(18, 18, 18), BorderColor3 = Color3.fromRGB(0, 0, 0), BorderSizePixel = 0, FontFace = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal), Position = UDim2.fromScale(1, 1), Size = UDim2.fromOffset(13, 13), Text = "C", TextColor3 = Color3.fromRGB(200, 200, 200), TextSize = 14, }) :: TextButton 
+	local ValueGradient=new("UIGradient", { Parent = ValMap, Color = ColorSequence.new{ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)) }, Rotation = 90, Transparency = NumberSequence.new{ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }, }) 
+	local SaturationGradient = new("UIGradient", { Parent = SatMap, Transparency = NumberSequence.new{ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }, }) 
+	local HueGradient =	new("UIGradient", { Parent = HueBar, Color = ColorSequence.new{ ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.167, Color3.fromRGB(255, 255, 0)), ColorSequenceKeypoint.new(0.333, Color3.fromRGB(0, 255, 0)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)), ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)), ColorSequenceKeypoint.new(0.833, Color3.fromRGB(255, 0, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)) }, Rotation = 90, }) 
+	new("UIStroke", { Parent = ColorPickerFrame, BorderStrokePosition = Enum.BorderStrokePosition.Inner, }) 
+	new("UIPadding", { Parent = ColorPickerFrame, PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), PaddingTop = UDim.new(0, 6), }) 
+	new("UIStroke", { Parent = ColorMap, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, }) 
+	new("UIStroke", { Parent = ColorMarker, BorderStrokePosition = Enum.BorderStrokePosition.Center, LineJoinMode = Enum.LineJoinMode.Miter, Thickness = 1.25, }) 
+	new("UIStroke", { Parent = HueBar, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, }) 
+	new("UIStroke", { Parent = HueMarker, LineJoinMode = Enum.LineJoinMode.Miter, Thickness = 2, }) 
+	new("UIStroke", { Parent = HueMarker, BorderStrokePosition = Enum.BorderStrokePosition.Inner, Color = Color3.fromRGB(255, 255, 255), LineJoinMode = Enum.LineJoinMode.Miter, Thickness = 1.9, }) 
+	new("UIStroke", { Parent = AlphaBar, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, }) 
+	new("UIGradient", { Parent = AlphaFill, Transparency = NumberSequence.new{ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }, }) 
+	new("UIStroke", { Parent = AlphaMarker, LineJoinMode = Enum.LineJoinMode.Miter, Thickness = 2, }) 
+	new("UIStroke", { Parent = AlphaMarker, BorderStrokePosition = Enum.BorderStrokePosition.Inner, Color = Color3.fromRGB(255, 255, 255), LineJoinMode = Enum.LineJoinMode.Miter, Thickness = 1.9, }) 
+	new("UIStroke", { Parent = CopyButton, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, }) 
+	new("UIPadding", { Parent = CopyButton, PaddingBottom = UDim.new(0, 1), PaddingRight = UDim.new(0, 1), })
+
+	ColorPickerFrame.MouseEnter:Connect(function()
+		for _, w in ne
