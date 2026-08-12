@@ -24,6 +24,12 @@ local Library = {
 	Elements = {},     -- top-level elements (buttons, sections, etc.)
 	Subelements = {},  -- elements that live inside a section (toggles, keybinds, etc.)
 
+	-- Higher-level "window / tab / group" API, matching the layout most
+	-- example scripts for this kind of library expect (lib:win -> Window:tab -> Tab:group).
+	Windows = {},
+	Tabs = {},
+	Groups = {},
+
 	Presets = {
 		Default = {
 			Accent = Color3.fromRGB(255, 0, 245),
@@ -44,6 +50,9 @@ Library.Theme = Library.Presets.Default
 
 Library.Elements.__index = Library.Elements
 Library.Subelements.__index = Library.Subelements
+Library.Windows.__index = Library.Windows
+Library.Tabs.__index = Library.Tabs
+Library.Groups.__index = Library.Groups
 Library.__index = Library
 
 ----------------------------------------------------------------
@@ -874,6 +883,681 @@ function Library.Subelements:ColorPicker(config: {})
 
 	setmetatable(Element, Library.Subelements)
 	return Element
+end
+
+----------------------------------------------------------------
+-- Window / Tab / Group API
+--
+-- This is a higher-level layer on top of everything above. It matches the
+-- shape most example scripts expect: lib:win(...) -> Window:tab(...) ->
+-- Tab:group(...) -> Group:butt / :newtoggle / :newslider / :newdropdown /
+-- :newkeybind / :newcolor(...). Method names are kept exactly as the
+-- example script uses them so it can run unmodified.
+----------------------------------------------------------------
+
+local DEFAULT_FONT = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Regular, Enum.FontStyle.Normal)
+local BOLD_FONT = Font.new("rbxasset://fonts/families/SourceSansPro.json", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+
+-- Creates a labeled row inside a group. Returns the row and a right-aligned
+-- "control holder" frame that individual elements attach their control to.
+local function CreateGroupRow(group, text: string, height: number?)
+	local Row = Create("Frame", {
+		Parent = group.Container,
+		Size = UDim2.new(1, 0, 0, height or 20),
+		BackgroundTransparency = 1,
+	}) :: Frame
+
+	Create("TextLabel", {
+		Parent = Row,
+		BackgroundTransparency = 1,
+		Size = UDim2.new(0.55, 0, 1, 0),
+		FontFace = DEFAULT_FONT,
+		Text = text,
+		TextColor3 = Color3.fromRGB(200, 200, 200),
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+
+	local ControlHolder = Create("Frame", {
+		Parent = Row,
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(1, 0),
+		Size = UDim2.new(0.45, 0, 1, 0),
+		BackgroundTransparency = 1,
+	}) :: Frame
+
+	return Row, ControlHolder
+end
+
+----------------------------------------------------------------
+-- lib:win(name, config) -> Window
+----------------------------------------------------------------
+
+function Library:win(name: string, config: {})
+	config = self:DeepMerge({
+		title = name,
+		logo = "",
+		size = UDim2.fromOffset(600, 400),
+		position = UDim2.fromScale(0.5, 0.5),
+		anchor = Vector2.new(0.5, 0.5),
+	}, config or {})
+
+	local Frame = Create("Frame", {
+		Parent = self.ScreenGui,
+		Name = name,
+		Size = config.size,
+		Position = config.position,
+		AnchorPoint = config.anchor,
+		BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+		BorderSizePixel = 0,
+		ClipsDescendants = true,
+	}) :: Frame
+	Create("UICorner", { Parent = Frame, CornerRadius = UDim.new(0, 6) })
+
+	local TitleBar = Create("Frame", {
+		Parent = Frame,
+		Name = "TitleBar",
+		Size = UDim2.new(1, 0, 0, 32),
+		BackgroundColor3 = Color3.fromRGB(15, 15, 15),
+		BorderSizePixel = 0,
+	}) :: Frame
+
+	if config.logo ~= "" then
+		Create("ImageLabel", {
+			Parent = TitleBar,
+			BackgroundTransparency = 1,
+			Position = UDim2.fromOffset(8, 6),
+			Size = UDim2.fromOffset(20, 20),
+			Image = config.logo,
+		})
+	end
+
+	Create("TextLabel", {
+		Parent = TitleBar,
+		BackgroundTransparency = 1,
+		Position = UDim2.fromOffset(36, 0),
+		Size = UDim2.new(1, -44, 1, 0),
+		FontFace = BOLD_FONT,
+		Text = config.title,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		TextSize = 16,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+
+	-- Drag-to-move via the title bar.
+	do
+		local dragging = false
+		local dragStart, startPosition
+
+		TitleBar.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				dragStart = input.Position
+				startPosition = Frame.Position
+
+				input.Changed:Connect(function()
+					if input.UserInputState == Enum.UserInputState.End then
+						dragging = false
+					end
+				end)
+			end
+		end)
+
+		UserInputService.InputChanged:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+				local delta = input.Position - dragStart
+				Frame.Position = UDim2.new(
+					startPosition.X.Scale, startPosition.X.Offset + delta.X,
+					startPosition.Y.Scale, startPosition.Y.Offset + delta.Y
+				)
+			end
+		end)
+	end
+
+	local TabBar = Create("Frame", {
+		Parent = Frame,
+		Name = "TabBar",
+		Position = UDim2.fromOffset(0, 32),
+		Size = UDim2.new(0, 120, 1, -32),
+		BackgroundColor3 = Color3.fromRGB(15, 15, 15),
+		BorderSizePixel = 0,
+	}) :: Frame
+	Create("UIListLayout", { Parent = TabBar, SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 2) })
+	Create("UIPadding", { Parent = TabBar, PaddingTop = UDim.new(0, 4) })
+
+	local PageContainer = Create("Frame", {
+		Parent = Frame,
+		Name = "Pages",
+		Position = UDim2.fromOffset(120, 32),
+		Size = UDim2.new(1, -120, 1, -32),
+		BackgroundTransparency = 1,
+	}) :: Frame
+
+	local Window = setmetatable({
+		Instance = Frame,
+		TabBar = TabBar,
+		PageContainer = PageContainer,
+		Tabs = {},
+	}, Library.Windows)
+
+	-- Show/hide the whole window with the library hotkey.
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if not gameProcessed and input.KeyCode == Library.Hotkey then
+			Frame.Visible = not Frame.Visible
+		end
+	end)
+
+	return Window
+end
+
+----------------------------------------------------------------
+-- Window:tab(name) -> Tab
+----------------------------------------------------------------
+
+function Library.Windows:tab(name: string)
+	local TabButton = Create("TextButton", {
+		Parent = self.TabBar,
+		Size = UDim2.new(1, 0, 0, 28),
+		BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+		BorderSizePixel = 0,
+		FontFace = DEFAULT_FONT,
+		Text = name,
+		TextColor3 = Color3.fromRGB(200, 200, 200),
+		TextSize = 14,
+	}) :: TextButton
+
+	local Page = Create("ScrollingFrame", {
+		Parent = self.PageContainer,
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 4,
+		Visible = (#self.Tabs == 0),
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}) :: ScrollingFrame
+	Create("UIPadding", {
+		Parent = Page,
+		PaddingLeft = UDim.new(0, 8),
+		PaddingRight = UDim.new(0, 8),
+		PaddingTop = UDim.new(0, 8),
+		PaddingBottom = UDim.new(0, 8),
+	})
+
+	local Columns = Create("Frame", {
+		Parent = Page,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+	}) :: Frame
+	Create("UIListLayout", {
+		Parent = Columns,
+		FillDirection = Enum.FillDirection.Horizontal,
+		Padding = UDim.new(0, 8),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+	})
+
+	local LeftColumn = Create("Frame", {
+		Parent = Columns,
+		Name = "LeftColumn",
+		Size = UDim2.new(0.5, -4, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+	}) :: Frame
+	Create("UIListLayout", { Parent = LeftColumn, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+
+	local RightColumn = Create("Frame", {
+		Parent = Columns,
+		Name = "RightColumn",
+		Size = UDim2.new(0.5, -4, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundTransparency = 1,
+	}) :: Frame
+	Create("UIListLayout", { Parent = RightColumn, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+
+	local Tab = setmetatable({
+		Instance = Page,
+		Button = TabButton,
+		LeftColumn = LeftColumn,
+		RightColumn = RightColumn,
+	}, Library.Tabs)
+
+	table.insert(self.Tabs, Tab)
+
+	TabButton.Activated:Connect(function()
+		for _, otherTab in ipairs(self.Tabs) do
+			otherTab.Instance.Visible = false
+			otherTab.Button.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+		end
+		Page.Visible = true
+		TabButton.BackgroundColor3 = Library.Theme.Accent
+	end)
+
+	if #self.Tabs == 1 then
+		TabButton.BackgroundColor3 = Library.Theme.Accent
+	end
+
+	return Tab
+end
+
+----------------------------------------------------------------
+-- Tab:group(name, config) -> Group
+----------------------------------------------------------------
+
+function Library.Tabs:group(name: string, config: {}?)
+	config = Library:DeepMerge({ side = "left" }, config or {})
+	local Parent = (config.side == "right") and self.RightColumn or self.LeftColumn
+
+	local Box = Create("Frame", {
+		Parent = Parent,
+		Name = name,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+		BorderSizePixel = 0,
+	}) :: Frame
+	Create("UICorner", { Parent = Box, CornerRadius = UDim.new(0, 4) })
+	Create("UIStroke", { Parent = Box, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Color = Color3.fromRGB(30, 30, 30) })
+	Create("UIPadding", {
+		Parent = Box,
+		PaddingLeft = UDim.new(0, 8),
+		PaddingRight = UDim.new(0, 8),
+		PaddingTop = UDim.new(0, 8),
+		PaddingBottom = UDim.new(0, 8),
+	})
+	Create("UIListLayout", { Parent = Box, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+
+	Create("TextLabel", {
+		Parent = Box,
+		BackgroundTransparency = 1,
+		LayoutOrder = -1,
+		Size = UDim2.new(1, 0, 0, 16),
+		FontFace = BOLD_FONT,
+		Text = name,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		TextSize = 14,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+
+	return setmetatable({ Container = Box }, Library.Groups)
+end
+
+----------------------------------------------------------------
+-- Group:butt(config)
+----------------------------------------------------------------
+
+function Library.Groups:butt(config: {}?)
+	config = Library:DeepMerge({ text = "Button", call = print }, config or {})
+
+	local Button = Create("TextButton", {
+		Parent = self.Container,
+		Size = UDim2.new(1, 0, 0, 24),
+		BackgroundColor3 = Color3.fromRGB(28, 28, 28),
+		BorderSizePixel = 0,
+		FontFace = DEFAULT_FONT,
+		Text = config.text,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		TextSize = 13,
+	}) :: TextButton
+	Create("UICorner", { Parent = Button, CornerRadius = UDim.new(0, 4) })
+
+	Button.Activated:Connect(config.call)
+
+	return { Instance = Button }
+end
+
+----------------------------------------------------------------
+-- Group:newtoggle(config)
+----------------------------------------------------------------
+
+function Library.Groups:newtoggle(config: {}?)
+	config = Library:DeepMerge({ text = "Toggle", val = false, call = function() end }, config or {})
+
+	local Row, Holder = CreateGroupRow(self, config.text)
+
+	local Switch = Create("TextButton", {
+		Parent = Holder,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.fromOffset(18, 18),
+		BackgroundColor3 = config.val and Library.Theme.Accent or Color3.fromRGB(28, 28, 28),
+		BorderSizePixel = 0,
+		Text = "",
+	}) :: TextButton
+	Create("UICorner", { Parent = Switch, CornerRadius = UDim.new(1, 0) })
+
+	local Element = { Value = config.val, Callback = config.call, Instance = Switch }
+
+	function Element:Set(value: boolean)
+		self.Value = value
+		Switch.BackgroundColor3 = value and Library.Theme.Accent or Color3.fromRGB(28, 28, 28)
+		self.Callback(value)
+	end
+
+	Switch.Activated:Connect(function()
+		Element:Set(not Element.Value)
+	end)
+
+	return Element
+end
+
+----------------------------------------------------------------
+-- Group:newslider(config)
+----------------------------------------------------------------
+
+function Library.Groups:newslider(config: {}?)
+	config = Library:DeepMerge({
+		text = "Slider", val = 0, min = 0, max = 100,
+		prefix = "", suffix = "", call = function() end,
+	}, config or {})
+
+	local Row = Create("Frame", { Parent = self.Container, Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1 }) :: Frame
+
+	Create("TextLabel", {
+		Parent = Row,
+		BackgroundTransparency = 1,
+		Size = UDim2.new(0.6, 0, 0, 14),
+		FontFace = DEFAULT_FONT,
+		Text = config.text,
+		TextColor3 = Color3.fromRGB(200, 200, 200),
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+
+	local ValueLabel = Create("TextLabel", {
+		Parent = Row,
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(1, 0),
+		BackgroundTransparency = 1,
+		Size = UDim2.new(0.4, 0, 0, 14),
+		FontFace = DEFAULT_FONT,
+		Text = config.prefix .. tostring(config.val) .. config.suffix,
+		TextColor3 = Color3.fromRGB(150, 150, 150),
+		TextSize = 12,
+		TextXAlignment = Enum.TextXAlignment.Right,
+	}) :: TextLabel
+
+	local Bar = Create("Frame", {
+		Parent = Row,
+		Position = UDim2.fromOffset(0, 20),
+		Size = UDim2.new(1, 0, 0, 6),
+		BackgroundColor3 = Color3.fromRGB(28, 28, 28),
+		BorderSizePixel = 0,
+	}) :: Frame
+	Create("UICorner", { Parent = Bar, CornerRadius = UDim.new(1, 0) })
+
+	local function ScaleForValue(value: number)
+		return (value - config.min) / (config.max - config.min)
+	end
+
+	local Fill = Create("Frame", {
+		Parent = Bar,
+		Size = UDim2.fromScale(ScaleForValue(config.val), 1),
+		BackgroundColor3 = Library.Theme.Accent,
+		BorderSizePixel = 0,
+	}) :: Frame
+	Create("UICorner", { Parent = Fill, CornerRadius = UDim.new(1, 0) })
+
+	local Element = { Value = config.val, Callback = config.call, Instance = Bar }
+
+	function Element:Set(value: number)
+		value = math.clamp(value, config.min, config.max)
+		self.Value = value
+		Fill.Size = UDim2.fromScale(ScaleForValue(value), 1)
+		ValueLabel.Text = config.prefix .. tostring(math.floor(value)) .. config.suffix
+		self.Callback(value)
+	end
+
+	local dragging = false
+
+	local function SetFromInputX(x: number)
+		local relative = math.clamp((x - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
+		Element:Set(config.min + (config.max - config.min) * relative)
+	end
+
+	Bar.InputBegan:Connect(function(input)
+		if Library:IsPointerInput(input) then
+			dragging = true
+			SetFromInputX(input.Position.X)
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			SetFromInputX(input.Position.X)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
+
+	return Element
+end
+
+----------------------------------------------------------------
+-- Group:newdropdown(config)
+----------------------------------------------------------------
+
+function Library.Groups:newdropdown(config: {}?)
+	config = Library:DeepMerge({
+		text = "Dropdown", multi = false, val = {}, list = {},
+		call = function() end,
+	}, config or {})
+
+	local Row = Create("Frame", { Parent = self.Container, Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1 }) :: Frame
+
+	Create("TextLabel", {
+		Parent = Row,
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 14),
+		FontFace = DEFAULT_FONT,
+		Text = config.text,
+		TextColor3 = Color3.fromRGB(200, 200, 200),
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+	})
+
+	local DropButton = Create("TextButton", {
+		Parent = Row,
+		Position = UDim2.fromOffset(0, 18),
+		Size = UDim2.new(1, 0, 0, 20),
+		BackgroundColor3 = Color3.fromRGB(28, 28, 28),
+		BorderSizePixel = 0,
+		FontFace = DEFAULT_FONT,
+		Text = "Select...",
+		TextColor3 = Color3.fromRGB(200, 200, 200),
+		TextSize = 12,
+	}) :: TextButton
+	Create("UICorner", { Parent = DropButton, CornerRadius = UDim.new(0, 4) })
+
+	local ListFrame = Create("Frame", {
+		Parent = self.Container,
+		Visible = false,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		BackgroundColor3 = Color3.fromRGB(24, 24, 24),
+		BorderSizePixel = 0,
+	}) :: Frame
+	Create("UIListLayout", { Parent = ListFrame, SortOrder = Enum.SortOrder.LayoutOrder })
+
+	local Element = { Value = config.val, Callback = config.call, Instance = DropButton }
+
+	local function Refresh()
+		DropButton.Text = (#Element.Value > 0) and table.concat(Element.Value, ", ") or "Select..."
+	end
+
+	for _, option in ipairs(config.list) do
+		local OptionButton = Create("TextButton", {
+			Parent = ListFrame,
+			Size = UDim2.new(1, 0, 0, 20),
+			BackgroundTransparency = 1,
+			FontFace = DEFAULT_FONT,
+			Text = option,
+			TextColor3 = Color3.fromRGB(200, 200, 200),
+			TextSize = 12,
+		}) :: TextButton
+
+		OptionButton.Activated:Connect(function()
+			if config.multi then
+				local index = table.find(Element.Value, option)
+				if index then
+					table.remove(Element.Value, index)
+				else
+					table.insert(Element.Value, option)
+				end
+			else
+				Element.Value = { option }
+				ListFrame.Visible = false
+			end
+
+			Refresh()
+			Element.Callback(Element.Value)
+		end)
+	end
+
+	DropButton.Activated:Connect(function()
+		ListFrame.Visible = not ListFrame.Visible
+	end)
+
+	Refresh()
+	return Element
+end
+
+----------------------------------------------------------------
+-- Group:newkeybind(config)
+----------------------------------------------------------------
+
+function Library.Groups:newkeybind(config: {}?)
+	config = Library:DeepMerge({ text = "Keybind", mode = "Click", val = nil, call = function() end }, config or {})
+
+	local Row, Holder = CreateGroupRow(self, config.text)
+
+	local KeyButton = Create("TextButton", {
+		Parent = Holder,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.fromOffset(60, 20),
+		BackgroundColor3 = Color3.fromRGB(28, 28, 28),
+		BorderSizePixel = 0,
+		FontFace = DEFAULT_FONT,
+		Text = config.val or "?",
+		TextColor3 = Color3.fromRGB(200, 200, 200),
+		TextSize = 12,
+	}) :: TextButton
+	Create("UICorner", { Parent = KeyButton, CornerRadius = UDim.new(0, 4) })
+
+	local Element = {
+		Value = config.val,
+		Mode = config.mode,
+		Callback = config.call,
+		Editing = false,
+		Pressed = false,
+		Instance = KeyButton,
+	}
+
+	KeyButton.Activated:Connect(function()
+		Element.Editing = true
+		KeyButton.Text = "..."
+	end)
+
+	local function RunWhilePressed()
+		task.spawn(function()
+			while Element.Pressed do
+				local ok, err = pcall(Element.Callback, Element.Value)
+				if not ok then warn(err) end
+				task.wait()
+			end
+		end)
+	end
+
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if Element.Editing then
+			if gameProcessed then return end
+			local formatted = input.UserInputType == Enum.UserInputType.Keyboard
+				and FormatInputName(input.KeyCode)
+				or FormatInputName(input.UserInputType)
+
+			Element.Value = formatted
+			KeyButton.Text = formatted
+			Element.Editing = false
+			return
+		end
+
+		if gameProcessed then return end
+
+		local matches = FormatInputName(input.KeyCode) == Element.Value
+			or FormatInputName(input.UserInputType) == Element.Value
+		if not matches then return end
+
+		if Element.Mode == "Click" then
+			local ok, err = pcall(Element.Callback, Element.Value)
+			if not ok then warn(err) end
+		elseif Element.Mode == "Hold" then
+			Element.Pressed = true
+			RunWhilePressed()
+		elseif Element.Mode == "Toggle" then
+			Element.Pressed = not Element.Pressed
+			if Element.Pressed then
+				RunWhilePressed()
+			end
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		local matches = FormatInputName(input.KeyCode) == Element.Value
+			or FormatInputName(input.UserInputType) == Element.Value
+		if matches and Element.Mode == "Hold" then
+			Element.Pressed = false
+		end
+	end)
+
+	return Element
+end
+
+----------------------------------------------------------------
+-- Group:newcolor(config)  -- reuses the full Subelements:ColorPicker
+----------------------------------------------------------------
+
+function Library.Groups:newcolor(config: {}?)
+	config = Library:DeepMerge({ text = "Color", val = Color3.fromRGB(255, 255, 255), alpha = 1, call = function() end }, config or {})
+
+	local Row, Holder = CreateGroupRow(self, config.text)
+
+	local Swatch = Create("TextButton", {
+		Parent = Holder,
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.fromOffset(20, 20),
+		BackgroundColor3 = config.val,
+		BorderSizePixel = 0,
+		Text = "",
+	}) :: TextButton
+	Create("UICorner", { Parent = Swatch, CornerRadius = UDim.new(0, 4) })
+	Create("UIStroke", { Parent = Swatch, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
+
+	-- Reuse the full drag-based picker; it just needs something with a
+	-- RightContainer to parent its (hidden) built-in preview button to.
+	local FakeSection = { RightContainer = Holder }
+	local Picker = Library.Subelements.ColorPicker(FakeSection, {
+		Text = config.text,
+		Value = config.val,
+		Alpha = config.alpha,
+		Callback = function(color, alpha)
+			Swatch.BackgroundColor3 = color
+			config.call(color, alpha)
+		end,
+	})
+
+	-- Hide the picker's own preview button; our swatch drives visibility instead.
+	Picker.Instance.Visible = false
+	Swatch.Activated:Connect(function()
+		Picker.PickerFrame.Visible = not Picker.PickerFrame.Visible
+	end)
+
+	return Picker
 end
 
 ----------------------------------------------------------------
