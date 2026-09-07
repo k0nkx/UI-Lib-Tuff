@@ -1285,11 +1285,17 @@ local Library; do
             Items.Value.Instance.Text = "Selecting"
 
             self.Binding = Library:Connect(Services.UserInputService.InputBegan, function(Input, GameProcessedEvent)
-                if GameProcessedEvent then
+                -- Allow binding even when GameProcessedEvent is true so modifier keys
+                -- (LeftShift, LeftControl, LeftAlt, etc.) can be selected.
+                -- Still ignore pure mouse movement / unknown when no real key.
+                local selected = Input.KeyCode ~= Enum.KeyCode.Unknown and Input.KeyCode or Input.UserInputType
+                if selected == Enum.KeyCode.Unknown and Input.UserInputType == Enum.UserInputType.Keyboard then
                     return
                 end
-
-                local selected = Input.KeyCode ~= Enum.KeyCode.Unknown and Input.KeyCode or Input.UserInputType
+                -- Ignore pure mouse movement while selecting
+                if Input.UserInputType == Enum.UserInputType.MouseMovement then
+                    return
+                end
 
                 -- Escape or pressing the same key unbinds (sets to None)
                 if selected == Enum.KeyCode.Escape
