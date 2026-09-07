@@ -4687,7 +4687,7 @@ local Library; do
                 Items.UIPadding = Library:Create("UIPadding",{PaddingBottom = UDim.new(0, -1); Parent = Items.Name.Instance})
 
                 Items.Bottom = Library:Create("Frame",{Parent = Items.Main.Instance; BorderSizePixel = 0; BackgroundTransparency = 1; Position = UDim2.new(0, -2, 1, 4); Size = UDim2.new(1, 4, 0, 0); ZIndex = 2; AutomaticSize = Enum.AutomaticSize.Y; BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
-                Items.Distance = Library:Create("TextLabel",{FontFace = Fonts.Preview; TextSize = 12;TextColor3 = Color3.fromRGB(255, 255, 255); Text = "67m"; Parent = Items.Bottom.Instance; BackgroundTransparency = 1; Size = UDim2.new(1, 0, 0, 0); BorderSizePixel = 0; AutomaticSize = Enum.AutomaticSize.Y; BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
+                Items.Distance = Library:Create("TextLabel",{FontFace = Fonts.Preview; TextSize = 12;TextColor3 = Color3.fromRGB(255, 255, 255); Text = "100m"; Parent = Items.Bottom.Instance; BackgroundTransparency = 1; Size = UDim2.new(1, 0, 0, 0); BorderSizePixel = 0; AutomaticSize = Enum.AutomaticSize.Y; BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
                 Items.UIStroke = Library:Create("UIStroke",{Parent = Items.Distance.Instance; LineJoinMode = Enum.LineJoinMode.Miter; Transparency = 0.5})
                 Items.UIPadding = Library:Create("UIPadding",{Parent = Items.Distance.Instance})
                 Items.Weapon = Library:Create("TextLabel",{FontFace = Fonts.Preview; TextSize = 12;TextColor3 = Color3.fromRGB(255, 255, 255); Text = "none"; Parent = Items.Bottom.Instance; BackgroundTransparency = 1; Size = UDim2.new(1, 0, 0, 0); BorderSizePixel = 0; AutomaticSize = Enum.AutomaticSize.Y; BackgroundColor3 = Color3.fromRGB(255, 255, 255)})
@@ -4697,6 +4697,17 @@ local Library; do
             end
 
             do -- Esp functions 
+                local function ColorFlag(Name, Fallback)
+                    local Value = Flags[Name]
+                    if type(Value) == "table" and Value.Color then
+                        return Value
+                    end
+                    return {
+                        Color = Fallback or Color3.fromRGB(255, 255, 255),
+                        Transparency = 1,
+                    }
+                end
+
                 Cfg.Update = function()
                     local Flags = Library.Flags 
 
@@ -4718,26 +4729,45 @@ local Library; do
                     Items.Flags.Instance.Visible = Flags["Flags"]
 
                     -- // Text Colors 
-                    Items.Name.Instance.TextColor3 = Flags["Names Text Color"].Color
-                    Items.Distance.Instance.TextColor3 = Flags["Distance Text Color"].Color
-                    Items.Weapon.Instance.TextColor3 = Flags["Weapon Text Color"].Color
-                    Items.Flags.Instance.TextColor3 = Flags["Flags Text Color"].Color
+                    Items.Name.Instance.TextColor3 = ColorFlag("Names Text Color").Color
+                    Items.Distance.Instance.TextColor3 = ColorFlag("Distance Text Color").Color
+                    Items.Weapon.Instance.TextColor3 = ColorFlag("Weapon Text Color").Color
+                    Items.Flags.Instance.TextColor3 = ColorFlag("Flags Text Color").Color
                     
                     -- // Gradients
-                    Items.BoxFillGradient.Instance.Color = ColorSeq{ColorKey(0, Flags["High Contrast Fill"].Color), ColorKey(1, Flags["Low Contrast Fill"].Color)}
-                    Items.BoxFillGradient.Instance.Transparency = NumSeq{NumKey(0, 1 - Flags["High Contrast Fill"].Transparency), NumKey(1, 1 - Flags["Low Contrast Fill"].Transparency)}
-                    
-                    Items.BoxGradient.Instance.Color = ColorSeq{ColorKey(0, Flags["High Contrast Box"].Color), ColorKey(1, Flags["Low Contrast Box"].Color)}
+                    local HighFill = ColorFlag("High Contrast Fill")
+                    local LowFill = ColorFlag("Low Contrast Fill")
+                    Items.BoxFillGradient.Instance.Color = ColorSeq{ColorKey(0, HighFill.Color), ColorKey(1, LowFill.Color)}
+                    Items.BoxFillGradient.Instance.Transparency = NumSeq{NumKey(0, 1 - (HighFill.Transparency or 1)), NumKey(1, 1 - (LowFill.Transparency or 1))}
 
-                    Items.GlowGradient.Instance.Color = ColorSeq{ColorKey(0, Flags["High Contrast Glow"].Color), ColorKey(1, Flags["Low Contrast Glow"].Color)}
-                    Items.GlowGradient.Instance.Transparency = NumSeq{NumKey(0, 1 - Flags["High Contrast Glow"].Transparency), NumKey(1, 1 - Flags["High Contrast Glow"].Transparency)}
+                    -- Box color: Team Color overrides high/low contrast box colors
+                    if Flags["Team Color"] then
+                        local TeamCol = Color3.fromRGB(100, 180, 255)
+                        local LP = Services.Players.LocalPlayer
+                        if LP and LP.Team and LP.TeamColor then
+                            TeamCol = LP.TeamColor.Color
+                        end
+                        Items.BoxGradient.Instance.Color = ColorSeq{ColorKey(0, TeamCol), ColorKey(1, TeamCol)}
+                        Items.BoxAccent.Instance.Color = TeamCol
+                    else
+                        local HighBox = ColorFlag("High Contrast Box")
+                        local LowBox = ColorFlag("Low Contrast Box")
+                        Items.BoxGradient.Instance.Color = ColorSeq{ColorKey(0, HighBox.Color), ColorKey(1, LowBox.Color)}
+                        Items.BoxAccent.Instance.Color = HighBox.Color
+                    end
 
-                    Items.HealthbarGradient.Instance.Color = ColorSeq{ColorKey(0, Flags["High Health"].Color),ColorKey(0.5, Flags["Mid Health"].Color), ColorKey(1, Flags["Low Health"].Color)}
+                    local HighGlow = ColorFlag("High Contrast Glow")
+                    local LowGlow = ColorFlag("Low Contrast Glow")
+                    Items.GlowGradient.Instance.Color = ColorSeq{ColorKey(0, HighGlow.Color), ColorKey(1, LowGlow.Color)}
+                    Items.GlowGradient.Instance.Transparency = NumSeq{NumKey(0, 1 - (HighGlow.Transparency or 1)), NumKey(1, 1 - (LowGlow.Transparency or 1))}
 
-                    -- // Rotations 
-                    Items.BoxFillGradient.Instance.Rotation = Flags["Box Fill Rotation"]
-                    Items.BoxGradient.Instance.Rotation = Flags["Box Gradient Rotation"]
-                    Items.GlowGradient.Instance.Rotation = Flags["Box Glow Rotation"]
+                    local HighHealth = ColorFlag("High Health", Color3.fromRGB(0, 255, 0))
+                    local MidHealth = ColorFlag("Mid Health", Color3.fromRGB(255, 165, 0))
+                    local LowHealth = ColorFlag("Low Health", Color3.fromRGB(255, 0, 0))
+                    Items.HealthbarGradient.Instance.Color = ColorSeq{ColorKey(0, HighHealth.Color), ColorKey(0.5, MidHealth.Color), ColorKey(1, LowHealth.Color)}
+
+                    -- // Rotation (fill only)
+                    Items.BoxFillGradient.Instance.Rotation = Flags["Box Fill Rotation"] or 90
                 end
             end 
 
@@ -4997,6 +5027,10 @@ local Library; do
                 Holder.Visible = true
                 Holder.Position = UDim2.new(0.5, 0, 0, Position.Y)
                 Holder.Size = UDim2.fromOffset(Size.X, Size.Y)
+
+                if Distance then
+                    Items.Distance.Instance.Text = tostring(Distance) .. "m"
+                end
 
                 Cfg.ChangeHealth() 
             end)
