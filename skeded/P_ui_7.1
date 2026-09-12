@@ -3031,7 +3031,7 @@ local Library; do
                         OldItems.Stroke:Tween({Color = Themes.Preset.ConfigOutline})
                     end
 
-                    Library:LoadConfig(Cfg.Name);
+                    Library:LoadConfig(Cfg.Name)
                     Items.Stroke:Tween({Color = Themes.Preset.Accent})
 
                     self.OldConfig = Button;
@@ -3070,29 +3070,63 @@ local Library; do
                 return Services.HttpService:JSONEncode(Config)
             end
 
-            Library.LoadConfig = function(self, JSON) 
-                local Config = Services.HttpService:JSONDecode(JSON)
+            Library.GetConfigPath = function(self, Name)
+                if not Name or Name == "" then
+                    return nil
+                end
+                local base = string.format("%s/%s/%s", self.Directory, "Configs", Name)
+                if isfile(base .. ".Cfg") then
+                    return base .. ".Cfg"
+                end
+                if isfile(base .. ".cfg") then
+                    return base .. ".cfg"
+                end
+                return base .. ".Cfg"
+            end
+
+            Library.LoadConfig = function(self, JSONOrName) 
+                local JSON = JSONOrName
+
+                -- Allow passing a config name instead of raw JSON
+                if type(JSONOrName) == "string" and not string.find(JSONOrName, "{", 1, true) then
+                    local path = self:GetConfigPath(JSONOrName)
+                    if path and isfile(path) then
+                        JSON = readfile(path)
+                    else
+                        warn("[Library] LoadConfig: config not found: " .. tostring(JSONOrName))
+                        return false
+                    end
+                end
+
+                local ok, Config = pcall(function()
+                    return Services.HttpService:JSONDecode(JSON)
+                end)
+                if not ok or type(Config) ~= "table" then
+                    warn("[Library] LoadConfig: invalid JSON")
+                    return false
+                end
 
                 for Idx, Value in Config do  
                     local Function = ConfigFlags[Idx]
 
-                    if string.find(Idx, "_RGB") or string.find(Idx, "_ALPHA") then 
+                    if type(Idx) == "string" and (string.find(Idx, "_RGB") or string.find(Idx, "_ALPHA")) then 
                         continue 
                     end 
 
                     if Function then 
                         if type(Value) == "table" and Value["Transparency"] and Value["Color"] then
-                            Function(Color3.fromHex(Value["Color"]), Value["Transparency"])
+                            pcall(Function, Color3.fromHex(Value["Color"]), Value["Transparency"])
                         else 
-                            Function(Value)
+                            pcall(Function, Value)
                         end
                     end 
                 end 
+                return true
             end 
 
             Library.DeleteConfig = function(self, Config)
-                local Path = string.format("%s/%s/%s.Cfg", Library.Directory, "Configs", Config)
-                if isfile(Path) then 
+                local Path = self:GetConfigPath(Config)
+                if Path and isfile(Path) then 
                     delfile(Path)
                 end
             end
@@ -3111,9 +3145,13 @@ local Library; do
                 local Name = readfile(self.Directory.."/Autoload.txt")
                 
                 if Name ~= "" then 
-                    for i = 1, 2 do 
-                        self:LoadConfig(readfile(self.Directory .. "/Configs/" .. Name .. ".Cfg"))
-                    end 
+                    local path = self:GetConfigPath(Name)
+                    if path and isfile(path) then
+                        local data = readfile(path)
+                        for _ = 1, 2 do 
+                            self:LoadConfig(data)
+                        end 
+                    end
                 end 
                 self.Window.Tweening = false 
             end 
@@ -3736,9 +3774,26 @@ local Library; do
             end
 
             Cfg.Set = function(Bool)
-                Bool = Bool == true
+                -- Accept true/false, 1/0, and "true"/"false" (configs / JSON edge cases)
+                if type(Bool) == "string" then
+                    local lower = string.lower(Bool)
+                    Bool = (lower == "true" or lower == "1" or lower == "on" or lower == "yes")
+                elseif type(Bool) == "number" then
+                    Bool = Bool ~= 0
+                else
+                    Bool = Bool == true
+                end
+
                 Cfg.Enabled = Bool
-                Items.Accent:Tween({ BackgroundTransparency = Bool and 0 or 1 })
+
+                -- Set immediately so config load always shows the correct state.
+                -- Tween alone can fail/race when many elements load at once.
+                if Items.Accent and Items.Accent.Instance then
+                    Items.Accent.Instance.BackgroundTransparency = Bool and 0 or 1
+                    pcall(function()
+                        Items.Accent:Tween({ BackgroundTransparency = Bool and 0 or 1 })
+                    end)
+                end
 
                 Flags[Cfg.Flag] = Bool
                 Cfg.Callback(Bool)
@@ -3750,6 +3805,13 @@ local Library; do
                         kp.Active = Bool
                         if Flags[kp.Flag] and type(Flags[kp.Flag]) == "table" then
                             Flags[kp.Flag].Active = Bool
+                        end
+                        if kp.UpdateHighlight or (Library.Keybinds) then
+                            pcall(function()
+                                if kp.Items and Flags[kp.Flag] then
+                                    -- refresh list highlight if available
+                                end
+                            end)
                         end
                     end
                 end
@@ -4421,11 +4483,17 @@ local Library; do
                     Cfg.Key = Input.Key or "None"
                     Cfg.Mode = Input.Mode or "Toggle"
 
-                    if Input.Active then
-                        Cfg.Active = Input.Active
+                    -- Always apply Active when present (including false)
+                    if Input.Active ~= nil then
+                        Cfg.Active = Input.Active == true
                     end
 
                     Keypicker:SetMode(Cfg.Mode)
+
+                    -- Sync linked toggle checkbox visual + state when loading config
+                    if LinkedToggle and LinkedToggle.Set and LinkedToggle.Enabled ~= Cfg.Active then
+                        LinkedToggle.Set(Cfg.Active)
+                    end
                 end
 
                 Cfg.Callback(Cfg.Active)
@@ -5473,11 +5541,15 @@ local Library; do
                     ConfigHolder:UpdateConfigList()
                 end})
                 :AddButton({Text = "Load", Confirmation = true, Callback = function()
-                    if not (ConfigText and isfile(Library.Directory .. "/Configs/" .. ConfigText .. ".cfg")) then 
+                    if not ConfigText then 
+                        return 
+                    end 
+                    local path = Library:GetConfigPath(ConfigText)
+                    if not (path and isfile(path)) then 
                         return 
                     end 
                     self.Tweening = true
-                    Library:LoadConfig(readfile(Library.Directory .. "/Configs/" .. ConfigText .. ".cfg"))
+                    Library:LoadConfig(readfile(path))
                     self.Tweening = false
                     ConfigHolder:UpdateConfigList()
                 end})
