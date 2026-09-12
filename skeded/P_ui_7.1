@@ -3448,6 +3448,13 @@ local Library; do
                     table.insert(Parts, os.date("%b %d, %Y"))
                 end
 
+                if table.find(Strings, "Time") then
+                    -- e.g. 9:10 PM (strip leading zero on hour)
+                    local t = os.date("%I:%M %p")
+                    t = t:gsub("^0", "")
+                    table.insert(Parts, t)
+                end
+
                 local FinalText = table.concat(Parts, " | ")
 
                 Items.WatermarkTitle.Instance.Text = string.format(
@@ -5549,6 +5556,7 @@ local Library; do
                     "User ID",
                     "LocalPlayer Name",
                     "Date",
+                    "Time",
                 },
                 Multi = true,
                 Default = {"Title", "Fps", "Ping"},
