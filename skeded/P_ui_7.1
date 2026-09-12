@@ -3358,7 +3358,29 @@ local Library; do
                 end
 
                 if table.find(Strings, "Ping") then
-                    table.insert(Parts, Services.Stats.PerformanceStats.Ping:GetValue() .. " ping")
+                    local dataPing = 0
+                    local ok, value = pcall(function()
+                        local network = Services.Stats:FindFirstChild("Network")
+                        local serverStats = network and network:FindFirstChild("ServerStatsItem")
+                        local dataPingItem = serverStats and serverStats:FindFirstChild("Data Ping")
+                        if dataPingItem then
+                            return dataPingItem:GetValue()
+                        end
+                        return nil
+                    end)
+                    if ok and type(value) == "number" then
+                        dataPing = value
+                    else
+                        -- Fallback: parse "Data Ping" string if GetValue is unavailable
+                        pcall(function()
+                            local item = Services.Stats.Network.ServerStatsItem:FindFirstChild("Data Ping")
+                            if item then
+                                local str = item:GetValueString()
+                                dataPing = tonumber(string.match(str or "", "%d+")) or 0
+                            end
+                        end)
+                    end
+                    table.insert(Parts, math.floor(dataPing) .. " ping")
                 end
 
                 if table.find(Strings, "Game Name") then
