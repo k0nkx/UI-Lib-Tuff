@@ -3332,7 +3332,42 @@ local Library; do
             local Frames = 0
             local FPS = 0
             local LastTick = tick()
+            local SessionStart = tick()
             local GameName = Services.MarketplaceService:GetProductInfo(game.PlaceId).Name
+
+            local function getExecutorName()
+                local ok, name = pcall(function()
+                    if typeof(identifyexecutor) == "function" then
+                        return identifyexecutor()
+                    end
+                    if typeof(getexecutorname) == "function" then
+                        return getexecutorname()
+                    end
+                    return nil
+                end)
+                if ok and type(name) == "string" and name ~= "" then
+                    -- identifyexecutor can return name, version — take the name part
+                    local short = string.match(name, "^([^,\n]+)")
+                    return short or name
+                end
+                return "Unknown"
+            end
+
+            local function formatSessionTime(seconds)
+                seconds = math.max(0, math.floor(seconds))
+                local h = math.floor(seconds / 3600)
+                local m = math.floor((seconds % 3600) / 60)
+                local s = seconds % 60
+                if h > 0 then
+                    return string.format("%dh %02dm %02ds", h, m, s)
+                end
+                if m > 0 then
+                    return string.format("%dm %02ds", m, s)
+                end
+                return string.format("%ds", s)
+            end
+
+            local CachedExecutorName = getExecutorName()
 
             Services.RunService.RenderStepped:Connect(function(Delta)
                 if not Flags["Refresh Rate"] then return end 
@@ -3381,6 +3416,20 @@ local Library; do
                         end)
                     end
                     table.insert(Parts, math.floor(dataPing) .. " ping")
+                end
+
+                if table.find(Strings, "Session Time") then
+                    table.insert(Parts, formatSessionTime(tick() - SessionStart))
+                end
+
+                if table.find(Strings, "Executor") then
+                    table.insert(Parts, CachedExecutorName)
+                end
+
+                if table.find(Strings, "Players") then
+                    local current = #Services.Players:GetPlayers()
+                    local maxPlayers = Services.Players.MaxPlayers or current
+                    table.insert(Parts, string.format("%d/%d", current, maxPlayers))
                 end
 
                 if table.find(Strings, "Game Name") then
@@ -5486,7 +5535,24 @@ local Library; do
 
             local Section = Settings:AddSection({Title = "HUD", Side = 2}) do 
             Section:AddToggle({Text = "Watermark", Default = true, Callback = self.SetWatermarkVisibility})
-            Section:AddDropdown({Text = "Options", Flag = "WatermarkSettings", Options = {"Title", "Fps", "Ping", "Game Name", "User ID", "LocalPlayer Name", "Date"}, Multi = true, Default = {"Title", "Fps", "Ping"}})
+            Section:AddDropdown({
+                Text = "Options",
+                Flag = "WatermarkSettings",
+                Options = {
+                    "Title",
+                    "Fps",
+                    "Ping",
+                    "Session Time",
+                    "Executor",
+                    "Players",
+                    "Game Name",
+                    "User ID",
+                    "LocalPlayer Name",
+                    "Date",
+                },
+                Multi = true,
+                Default = {"Title", "Fps", "Ping"},
+            })
             Section:AddSlider({Text = "Refresh Rate", Flag = "Refresh Rate", Min = 0, Max = 2, Default = 0.1, Suffix = "s", Decimal = 0.01})
             Section:AddToggle({Text = "Keybind List", Default = true, Callback = self.SetKeybindListVisibility})
 
