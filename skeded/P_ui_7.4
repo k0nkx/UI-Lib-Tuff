@@ -565,12 +565,48 @@ local Library; do
         Library.PreviewModel = {
             AssetId = "123974602339071",
             Url = "https://raw.githubusercontent.com/k0nkx/Custom-Models/main/123974602339071.rbxmx",
-            DisplaySize = 9.3,
-            OriginY = 3.7,
+            DisplaySize = 10,
+            -- Base position for the custom model (orbit center / PrimaryPart target)
             OriginX = 0,
+            OriginY = 3.2,
             OriginZ = 0,
+            -- Runtime / RMB-pan offset stacked on Origin (custom model shift)
+            OffsetX = 0,
+            OffsetY = 1,
+            OffsetZ = 0,
             _cached = nil,
         }
+
+        Library.GetPreviewModelPosition = function(self)
+            local pm = self.PreviewModel or {}
+            return Vector3.new(
+                (pm.OriginX or 0) + (pm.OffsetX or 0),
+                (pm.OriginY or 2.85) + (pm.OffsetY or 0),
+                (pm.OriginZ or 0) + (pm.OffsetZ or 0)
+            )
+        end
+
+        Library.ApplyPreviewModelPosition = function(self, model)
+            model = model or (self.PreviewModel and self.PreviewModel._cached)
+            if not model or not model.Parent then
+                return
+            end
+            local pos = self:GetPreviewModelPosition()
+            local ok = pcall(function()
+                model:PivotTo(CFrame.new(pos))
+            end)
+            if not ok then
+                local hrp = model:FindFirstChild("HumanoidRootPart") or model.PrimaryPart
+                if hrp and hrp:IsA("BasePart") then
+                    local delta = pos - hrp.Position
+                    for _, part in ipairs(model:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CFrame = part.CFrame + delta
+                        end
+                    end
+                end
+            end
+        end
 
         Library.EnsureCachedModelsFolder = function(self)
             pcall(function()
@@ -692,9 +728,8 @@ local Library; do
                 model.PrimaryPart = hrp
             end
 
-            if model.PrimaryPart then
-                model.PrimaryPart.CFrame = CFrame.new(pm.OriginX or 0, pm.OriginY or 2.85, pm.OriginZ or 0)
-            end
+            -- Place whole model at Origin + Offset (not only PrimaryPart)
+            Library:ApplyPreviewModelPosition(model)
 
             model.Name = "PeronaPreviewCache"
             return model
@@ -5195,7 +5230,7 @@ local Library; do
                 AutoRefresh = false,
                 ZoomMultiplier = 2,
                 AutoRotate = true,
-                RotationSpeed = 0.005,
+                RotationSpeed = 0.01,
                 RefreshRate = 30
             }
             
@@ -5458,43 +5493,26 @@ local Library; do
                     table.clear(lockedScrolls)
                 end
 
-                local function applyOriginToModel()
-                    if not Model then
-                        return
-                    end
-                    local pm = Library.PreviewModel
-                    if not pm then
-                        return
-                    end
-                    local origin = Vector3.new(pm.OriginX or 0, pm.OriginY or 2.85, pm.OriginZ or 0)
-                    local hrp = Model:FindFirstChild("HumanoidRootPart") or Model.PrimaryPart
-                    if not hrp then
-                        return
-                    end
-                    local delta = origin - hrp.Position
-                    if delta.Magnitude < 1e-6 then
-                        return
-                    end
-                    for _, part in ipairs(Model:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CFrame = part.CFrame + delta
-                        end
-                    end
-                    if (hrp.Position - origin).Magnitude > 1e-4 then
-                        hrp.CFrame = hrp.CFrame + (origin - hrp.Position)
+                local function applyModelPosition()
+                    if Model then
+                        Library:ApplyPreviewModelPosition(Model)
                     end
                 end
 
-                local function setOriginDelta(move)
+                -- RMB pan adjusts Offset (Origin stays the configured base for the custom model)
+                local function setOffsetDelta(move)
                     local pm = Library.PreviewModel
                     if not pm then
-                        Library.PreviewModel = { OriginX = 0, OriginY = 2.85, OriginZ = 0 }
+                        Library.PreviewModel = {
+                            OriginX = 0, OriginY = 2.85, OriginZ = 0,
+                            OffsetX = 0, OffsetY = 0, OffsetZ = 0,
+                        }
                         pm = Library.PreviewModel
                     end
-                    pm.OriginX = (pm.OriginX or 0) + move.X
-                    pm.OriginY = (pm.OriginY or 2.85) + move.Y
-                    pm.OriginZ = (pm.OriginZ or 0) + move.Z
-                    applyOriginToModel()
+                    pm.OffsetX = (pm.OffsetX or 0) + move.X
+                    pm.OffsetY = (pm.OffsetY or 0) + move.Y
+                    pm.OffsetZ = (pm.OffsetZ or 0) + move.Z
+                    applyModelPosition()
                 end
 
                 -- Hover → block parent UI scroll
@@ -5539,8 +5557,8 @@ local Library; do
                                 right = flatRight.Unit
                             end
                         end
-                        -- Drag down → OriginY up; horizontal follows camera right on XZ
-                        setOriginDelta(
+                        -- Drag down → OffsetY up; horizontal follows camera right on XZ
+                        setOffsetDelta(
                             right * (delta.X * panSensitivity)
                                 + Vector3.new(0, delta.Y * panSensitivity, 0)
                         )
@@ -5658,10 +5676,11 @@ local Library; do
                     if not pm then
                         return
                     end
-                    pm.OriginX = 0
-                    pm.OriginY = 2.85
-                    pm.OriginZ = 0
-                    applyOriginToModel()
+                    -- Reset runtime Offset only; Origin stays the configured base
+                    pm.OffsetX = 0
+                    pm.OffsetY = 0
+                    pm.OffsetZ = 0
+                    applyModelPosition()
                 end
 
                 Cfg.SetCameraPanSensitivity = function(value)
