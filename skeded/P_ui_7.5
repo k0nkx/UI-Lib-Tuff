@@ -100,11 +100,11 @@
 
     Section:AddLabel({ Text = "Static text" })
     Section:AddList({ Options = {"A","B"}, Multi = false, Flag = "MyList", Callback = fn })
-    Section:AddPreview({ Height = 300 }) -- ESP-style viewport preview (multi-model via Settings → Preview)
+    Section:AddPreview({ Height = 300 }) -- ESP viewport + built-in Model dropdown / Origin XYZ / Display Size
+    -- Section:AddPreview({ Height = 300, ShowControls = false }) -- viewport only
     Section:Playerlist({ Size = 239 })   -- player list UI
 
-    -- Preview multi-model (Settings tab after InitPanels):
-    -- Library.PreviewModels = { { Name=..., AssetId=..., Url=..., DisplaySize=..., OriginX/Y/Z=... }, ... }
+    -- Multi-model: Library.PreviewModels = { { Name, AssetId, Url, DisplaySize, OriginX, OriginY, OriginZ }, ... }
     -- Library:SetPreviewModel("Name") / Library:SetPreviewOrigins(x,y,z) / Library:ReloadActivePreviews()
 
     Multi-section tabs:
@@ -5392,6 +5392,7 @@ local Library; do
             local Cfg = {
                 Items = {};
                 Height = Data.Height or 300;
+                ShowControls = (Data.ShowControls ~= false); -- model dropdown + origin sliders under the viewport
 
                 -- PreviewData
                 EnableInputCamera = true,
@@ -5641,7 +5642,7 @@ local Library; do
                 end
 
                 local function lockParentScroll()
-                    local root = Items.Object and Items.Object.Instance or Items.ViewportFrame.Instance
+                    local root = (Items.Object and Items.Object.Instance) or Items.ViewportFrame.Instance
                     for _, sf in ipairs(collectParentScrolls(root)) do
                         if lockedScrolls[sf] == nil then
                             lockedScrolls[sf] = sf.ScrollingEnabled
@@ -6051,6 +6052,99 @@ local Library; do
                     end
                 end
             end)
+
+            -- Controls appear as normal section elements under the viewport
+            if Cfg.ShowControls and self and self.AddDropdown and self.AddSlider then
+                local modelList = Library:GetPreviewModelList()
+                local currentName = (Library.PreviewModel and Library.PreviewModel.Name) or (modelList[1] or "Default")
+                local OriginXSlider, OriginYSlider, OriginZSlider, DisplaySizeSlider
+
+                local ModelDropdown = self:AddDropdown({
+                    Text = "Model",
+                    Flag = "Preview Model",
+                    Options = modelList,
+                    Default = currentName,
+                    Callback = function(Option)
+                        if not Option or Option == "" then return end
+                        Library:SetPreviewModel(Option, true)
+                        local pm = Library.PreviewModel
+                        if OriginXSlider and OriginXSlider.Set then OriginXSlider.Set(pm.OriginX or 0) end
+                        if OriginYSlider and OriginYSlider.Set then OriginYSlider.Set(pm.OriginY or 2.85) end
+                        if OriginZSlider and OriginZSlider.Set then OriginZSlider.Set(pm.OriginZ or 0) end
+                        if DisplaySizeSlider and DisplaySizeSlider.Set then DisplaySizeSlider.Set(pm.DisplaySize or 9.3) end
+                    end
+                })
+
+                OriginXSlider = self:AddSlider({
+                    Text = "Origin X",
+                    Flag = "Preview Origin X",
+                    Min = -20, Max = 20,
+                    Default = (Library.PreviewModel and Library.PreviewModel.OriginX) or 0,
+                    Decimal = 0.05,
+                    Callback = function(Value)
+                        Library:SetPreviewOrigins(Value, nil, nil, true)
+                    end
+                })
+                OriginYSlider = self:AddSlider({
+                    Text = "Origin Y",
+                    Flag = "Preview Origin Y",
+                    Min = -20, Max = 20,
+                    Default = (Library.PreviewModel and Library.PreviewModel.OriginY) or 2.85,
+                    Decimal = 0.05,
+                    Callback = function(Value)
+                        Library:SetPreviewOrigins(nil, Value, nil, true)
+                    end
+                })
+                OriginZSlider = self:AddSlider({
+                    Text = "Origin Z",
+                    Flag = "Preview Origin Z",
+                    Min = -20, Max = 20,
+                    Default = (Library.PreviewModel and Library.PreviewModel.OriginZ) or 0,
+                    Decimal = 0.05,
+                    Callback = function(Value)
+                        Library:SetPreviewOrigins(nil, nil, Value, true)
+                    end
+                })
+                DisplaySizeSlider = self:AddSlider({
+                    Text = "Display Size",
+                    Flag = "Preview Display Size",
+                    Min = 1, Max = 30,
+                    Default = (Library.PreviewModel and Library.PreviewModel.DisplaySize) or 9.3,
+                    Decimal = 0.1,
+                    Callback = function(Value)
+                        Library:SetPreviewDisplaySize(Value, true)
+                    end
+                })
+
+                self:AddButton({
+                    Text = "Reload Model",
+                    Callback = function()
+                        if Library.PreviewModel then
+                            Library.PreviewModel._cached = nil
+                        end
+                        Library:ReloadActivePreviews()
+                        Library:Notify({ Text = "Preview reloaded", Lifetime = 2 })
+                    end
+                }):AddButton({
+                    Text = "Reset Origins",
+                    Callback = function()
+                        local entry = Library:FindPreviewModelEntry(Library.PreviewModel.Name or Library.PreviewModel.AssetId)
+                        local ox = (entry and entry.OriginX) or 0
+                        local oy = (entry and entry.OriginY) or 2.85
+                        local oz = (entry and entry.OriginZ) or 0
+                        Library:SetPreviewOrigins(ox, oy, oz, true)
+                        if OriginXSlider and OriginXSlider.Set then OriginXSlider.Set(ox) end
+                        if OriginYSlider and OriginYSlider.Set then OriginYSlider.Set(oy) end
+                        if OriginZSlider and OriginZSlider.Set then OriginZSlider.Set(oz) end
+                    end
+                })
+
+                Cfg.ModelDropdown = ModelDropdown
+                Cfg.OriginXSlider = OriginXSlider
+                Cfg.OriginYSlider = OriginYSlider
+                Cfg.OriginZSlider = OriginZSlider
+                Cfg.DisplaySizeSlider = DisplaySizeSlider
+            end
             
             return setmetatable(Cfg, Library)
         end
@@ -6305,110 +6399,6 @@ local Library; do
                 end
             })
 
-            -- Preview model selection + origin controls (multi custom character support)
-            local Section = Settings:AddSection({Title = "Preview", Side = 1}) do
-                local modelList = Library:GetPreviewModelList()
-                local currentName = Library.PreviewModel and Library.PreviewModel.Name or (modelList[1] or "Default")
-
-                local OriginXSlider, OriginYSlider, OriginZSlider, DisplaySizeSlider
-
-                local ModelDropdown = Section:AddDropdown({
-                    Text = "Model",
-                    Flag = "Preview Model",
-                    Options = modelList,
-                    Default = currentName,
-                    Callback = function(Option)
-                        if not Option or Option == "" then return end
-                        Library:SetPreviewModel(Option, true)
-                        local pm = Library.PreviewModel
-                        -- Keep slider visuals in sync with the selected model's origins / size
-                        if OriginXSlider and OriginXSlider.Set then OriginXSlider.Set(pm.OriginX or 0) end
-                        if OriginYSlider and OriginYSlider.Set then OriginYSlider.Set(pm.OriginY or 2.85) end
-                        if OriginZSlider and OriginZSlider.Set then OriginZSlider.Set(pm.OriginZ or 0) end
-                        if DisplaySizeSlider and DisplaySizeSlider.Set then DisplaySizeSlider.Set(pm.DisplaySize or 9.3) end
-                        Library:Notify({ Text = "Preview model: " .. tostring(pm.Name or Option), Lifetime = 2 })
-                    end
-                })
-
-                OriginXSlider = Section:AddSlider({
-                    Text = "Origin X",
-                    Flag = "Preview Origin X",
-                    Min = -20,
-                    Max = 20,
-                    Default = Library.PreviewModel.OriginX or 0,
-                    Decimal = 0.05,
-                    Callback = function(Value)
-                        Library:SetPreviewOrigins(Value, nil, nil, true)
-                    end
-                })
-                OriginYSlider = Section:AddSlider({
-                    Text = "Origin Y",
-                    Flag = "Preview Origin Y",
-                    Min = -20,
-                    Max = 20,
-                    Default = Library.PreviewModel.OriginY or 2.85,
-                    Decimal = 0.05,
-                    Callback = function(Value)
-                        Library:SetPreviewOrigins(nil, Value, nil, true)
-                    end
-                })
-                OriginZSlider = Section:AddSlider({
-                    Text = "Origin Z",
-                    Flag = "Preview Origin Z",
-                    Min = -20,
-                    Max = 20,
-                    Default = Library.PreviewModel.OriginZ or 0,
-                    Decimal = 0.05,
-                    Callback = function(Value)
-                        Library:SetPreviewOrigins(nil, nil, Value, true)
-                    end
-                })
-                DisplaySizeSlider = Section:AddSlider({
-                    Text = "Display Size",
-                    Flag = "Preview Display Size",
-                    Min = 1,
-                    Max = 30,
-                    Default = Library.PreviewModel.DisplaySize or 9.3,
-                    Decimal = 0.1,
-                    Callback = function(Value)
-                        Library:SetPreviewDisplaySize(Value, true)
-                    end
-                })
-
-                Section:AddButton({
-                    Text = "Reload Model",
-                    Callback = function()
-                        Library.PreviewModel._cached = nil
-                        Library:ReloadActivePreviews()
-                        Library:Notify({ Text = "Preview reloaded", Lifetime = 2 })
-                    end
-                }):AddButton({
-                    Text = "Reset Origins",
-                    Callback = function()
-                        local entry = Library:FindPreviewModelEntry(Library.PreviewModel.Name or Library.PreviewModel.AssetId)
-                        local ox = (entry and entry.OriginX) or 0
-                        local oy = (entry and entry.OriginY) or 2.85
-                        local oz = (entry and entry.OriginZ) or 0
-                        Library:SetPreviewOrigins(ox, oy, oz, true)
-                        if OriginXSlider and OriginXSlider.Set then OriginXSlider.Set(ox) end
-                        if OriginYSlider and OriginYSlider.Set then OriginYSlider.Set(oy) end
-                        if OriginZSlider and OriginZSlider.Set then OriginZSlider.Set(oz) end
-                        Library:Notify({ Text = "Origins reset", Lifetime = 2 })
-                    end
-                })
-
-                Section:AddButton({
-                    Text = "Refresh Model List",
-                    Callback = function()
-                        local list = Library:GetPreviewModelList()
-                        if ModelDropdown and ModelDropdown.RefreshDropdown then
-                            ModelDropdown:RefreshDropdown(list)
-                        end
-                        Library:Notify({ Text = "Models: " .. table.concat(list, ", "), Lifetime = 3 })
-                    end
-                })
-            end
-                
             local Section = Settings:AddSection({Title = "Theming", Side = 2})
                 for Name,Value in Themes.Preset do 
                     Section:AddColorPicker({Text = Name:gsub("(%l)(%u)", "%1 %2"), Default = Value, Flag = Name, NoCallback = true, Callback = function(Color)
