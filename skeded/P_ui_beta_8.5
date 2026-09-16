@@ -875,33 +875,130 @@ local Library; do
             return false, path
         end
 
+        -- Robust HTTP get (request() preferred for GitHub headers)
+        Library.HttpGetRaw = function(self, Url)
+            if not Url or Url == "" then
+                return nil
+            end
+            local body = nil
+            if request or http_request or (syn and syn.request) then
+                local req = request or http_request or syn.request
+                local ok, res = pcall(function()
+                    return req({
+                        Url = Url,
+                        Method = "GET",
+                        Headers = {
+                            ["User-Agent"] = "Peronahax-ModelSync",
+                            ["Accept"] = "application/vnd.github+json",
+                        },
+                    })
+                end)
+                if ok and type(res) == "table" then
+                    body = res.Body or res.body
+                end
+            end
+            if type(body) ~= "string" or #body < 1 then
+                local ok2, res2 = pcall(function()
+                    return game:HttpGet(Url)
+                end)
+                if ok2 and type(res2) == "string" then
+                    body = res2
+                end
+            end
+            if type(body) == "string" and #body > 0 then
+                return body
+            end
+            return nil
+        end
+
+        Library.UrlEncodePath = function(self, Path)
+            -- encode each segment but keep slashes
+            local parts = {}
+            for segment in string.gmatch(Path:gsub("\\", "/"), "[^/]+") do
+                local enc = segment:gsub("([^%w%-%._~])", function(c)
+                    return string.format("%%%02X", string.byte(c))
+                end)
+                parts[#parts + 1] = enc
+            end
+            return table.concat(parts, "/")
+        end
+
         -- Sync .rbxmx models from GitHub → Atlanta/CachedModels (skips files that already exist)
         Library.SyncPreviewModelsFromGitHub = function(self, Force)
             if Library._PreviewModelsSynced and not Force then
                 return Library.PreviewModels or {}
             end
+            -- brief cooldown after a failed attempt (unless Force)
+            if not Force and Library._PreviewModelsSyncFailAt then
+                if (tick() - Library._PreviewModelsSyncFailAt) < 20 then
+                    return Library.PreviewModels or {}
+                end
+            end
+
             self:EnsureCachedModelsFolder()
             local repo = Library.PreviewModelsRepo or {}
             local api = repo.Api or "https://api.github.com/repos/k0nkx/Custom-Models/git/trees/main?recursive=1"
             local rawBase = repo.Raw or "https://raw.githubusercontent.com/k0nkx/Custom-Models/main/"
+            if not rawBase:match("/$") then
+                rawBase = rawBase .. "/"
+            end
 
-            local ok, response = pcall(function()
-                return game:HttpGet(api)
-            end)
-            if not ok or type(response) ~= "string" or #response < 8 then
-                Library._PreviewModelsSynced = true -- don't spam failed requests
+            local response = self:HttpGetRaw(api)
+            if type(response) ~= "string" or #response < 8 then
+                Library._PreviewModelsSyncFailAt = tick()
                 return Library.PreviewModels or {}
             end
 
-            local decoded
-            local okJson, json = pcall(function()
+            local okJson, decoded = pcall(function()
                 return Services.HttpService:JSONDecode(response)
             end)
-            if not okJson or type(json) ~= "table" then
-                Library._PreviewModelsSynced = true
+            if not okJson or type(decoded) ~= "table" then
+                Library._PreviewModelsSyncFailAt = tick()
                 return Library.PreviewModels or {}
             end
-            decoded = json
+
+            -- Build list of .rbxmx blobs from tree API
+            local blobs = {} -- { path, name }
+            local seenPath = {}
+            local function addBlob(pathName)
+                if not pathName or seenPath[pathName] then
+                    return
+                end
+                pathName = pathName:gsub("\\", "/")
+                local fileName = pathName:match("([^/]+)%.[Rr][Bb][Xx][Mm][Xx]$")
+                if not fileName then
+                    return
+                end
+                seenPath[pathName] = true
+                blobs[#blobs + 1] = { Path = pathName, Name = fileName }
+            end
+
+            for _, item in ipairs(decoded.tree or {}) do
+                if item.type == "blob" and type(item.path) == "string" then
+                    addBlob(item.path)
+                end
+            end
+
+            -- Fallback: contents API if tree empty or truncated
+            if #blobs == 0 or decoded.truncated == true then
+                local contentsUrl = repo.Contents
+                    or "https://api.github.com/repos/k0nkx/Custom-Models/contents/"
+                local contentsBody = self:HttpGetRaw(contentsUrl)
+                if type(contentsBody) == "string" then
+                    local okC, contents = pcall(function()
+                        return Services.HttpService:JSONDecode(contentsBody)
+                    end)
+                    if okC and type(contents) == "table" then
+                        for _, item in ipairs(contents) do
+                            if type(item) == "table" and item.type == "file" and type(item.path) == "string" then
+                                addBlob(item.path)
+                            elseif type(item) == "table" and item.type == "file" and type(item.name) == "string" then
+                                addBlob(item.name)
+                            end
+                        end
+                    end
+                end
+            end
 
             local registry = Library.PreviewModels or {}
             local byId = {}
@@ -911,56 +1008,100 @@ local Library; do
                 end
             end
 
-            for _, item in ipairs(decoded.tree or {}) do
-                if item.type == "blob" and type(item.path) == "string" then
-                    local pathName = item.path:gsub("\\", "/")
-                    -- only root-level or any-path .rbxmx files
-                    local fileName = pathName:match("([^/]+)%.[Rr][Bb][Xx][Mm][Xx]$")
-                    if fileName then
-                        local assetId = fileName
-                        local rawUrl = rawBase .. pathName
-                        local localPath = self:GetCachedModelPath(assetId)
+            local downloaded, skipped, failed = 0, 0, 0
 
-                        -- download only if missing
-                        if not (isfile and isfile(localPath)) then
-                            local okDl, content = pcall(function()
-                                return game:HttpGet(rawUrl)
-                            end)
-                            if okDl and type(content) == "string" and #content > 32 then
-                                pcall(writefile, localPath, content)
-                            end
-                        end
+            for _, blob in ipairs(blobs) do
+                local assetId = blob.Name
+                local pathName = blob.Path
+                local rawUrl = rawBase .. self:UrlEncodePath(pathName)
+                -- also keep unencoded variant as fallback
+                local rawUrlPlain = rawBase .. pathName
+                local localPath = self:GetCachedModelPath(assetId)
 
-                        if not byId[assetId] then
-                            local entry = {
-                                Name = assetId,
-                                AssetId = assetId,
-                                Url = rawUrl,
-                                DisplaySize = 9.3,
-                                OriginX = 0,
-                                OriginY = 2.85,
-                                OriginZ = 0,
-                            }
-                            -- prefer meta from file if present
-                            if isfile and isfile(localPath) then
-                                local meta = self:ReadPreviewModelMeta(localPath)
-                                entry.DisplaySize = meta.DisplaySize
-                                entry.OriginX = meta.OriginX
-                                entry.OriginY = meta.OriginY
-                                entry.OriginZ = meta.OriginZ
-                            end
-                            registry[#registry + 1] = entry
-                            byId[assetId] = entry
-                        else
-                            -- keep registry entry but ensure Url is set
-                            byId[assetId].Url = byId[assetId].Url or rawUrl
+                local exists = false
+                if isfile then
+                    exists = isfile(localPath)
+                    if not exists then
+                        local alt = localPath:gsub("/", "\\")
+                        exists = isfile(alt)
+                        if exists then
+                            localPath = alt
                         end
                     end
+                end
+
+                if exists then
+                    skipped += 1
+                else
+                    local content = self:HttpGetRaw(rawUrl)
+                    if type(content) ~= "string" or #content < 32 then
+                        content = self:HttpGetRaw(rawUrlPlain)
+                    end
+                    -- one retry
+                    if type(content) ~= "string" or #content < 32 then
+                        task.wait(0.15)
+                        content = self:HttpGetRaw(rawUrlPlain) or self:HttpGetRaw(rawUrl)
+                    end
+
+                    if type(content) == "string" and #content > 32 then
+                        local writeOk = pcall(writefile, localPath, content)
+                        if writeOk and isfile and isfile(localPath) then
+                            downloaded += 1
+                        else
+                            -- try backslash path
+                            local alt = localPath:gsub("/", "\\")
+                            writeOk = pcall(writefile, alt, content)
+                            if writeOk and isfile and isfile(alt) then
+                                localPath = alt
+                                downloaded += 1
+                            else
+                                failed += 1
+                            end
+                        end
+                    else
+                        failed += 1
+                    end
+                end
+
+                if not byId[assetId] then
+                    local entry = {
+                        Name = assetId,
+                        AssetId = assetId,
+                        Url = rawUrlPlain,
+                        DisplaySize = 9.3,
+                        OriginX = 0,
+                        OriginY = 2.85,
+                        OriginZ = 0,
+                    }
+                    if isfile and isfile(localPath) then
+                        local meta = self:ReadPreviewModelMeta(localPath)
+                        entry.DisplaySize = meta.DisplaySize
+                        entry.OriginX = meta.OriginX
+                        entry.OriginY = meta.OriginY
+                        entry.OriginZ = meta.OriginZ
+                    end
+                    registry[#registry + 1] = entry
+                    byId[assetId] = entry
+                else
+                    byId[assetId].Url = byId[assetId].Url or rawUrlPlain
                 end
             end
 
             Library.PreviewModels = registry
-            Library._PreviewModelsSynced = true
+            -- only mark fully synced if we got a tree/list and no total failure on empty
+            if #blobs > 0 then
+                Library._PreviewModelsSynced = true
+                Library._PreviewModelsSyncFailAt = nil
+            else
+                Library._PreviewModelsSyncFailAt = tick()
+            end
+
+            Library._PreviewModelsLastSync = {
+                Total = #blobs,
+                Downloaded = downloaded,
+                Skipped = skipped,
+                Failed = failed,
+            }
             return registry
         end
 
@@ -1139,33 +1280,19 @@ local Library; do
             end
         end
 
-        -- Move the whole model to origin so mesh + HRP + ESP box stay locked together.
+        -- Origin only repositions HumanoidRootPart / PrimaryPart (mesh stays put).
         Library.ApplyOriginToModelInstance = function(self, model, originX, originY, originZ)
             if not model then
                 return
             end
             local target = CFrame.new(originX or 0, originY or 2.85, originZ or 0)
-            local ok = pcall(function()
-                model:PivotTo(target)
-            end)
-            if ok then
-                return
-            end
             local root = model:FindFirstChild("HumanoidRootPart")
                 or model.PrimaryPart
                 or model:FindFirstChildWhichIsA("BasePart", true)
             if not root or not root:IsA("BasePart") then
                 return
             end
-            local delta = target.Position - root.Position
-            if delta.Magnitude < 1e-8 then
-                return
-            end
-            for _, part in ipairs(model:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CFrame = part.CFrame + delta
-                end
-            end
+            root.CFrame = target
             if model.PrimaryPart ~= root then
                 model.PrimaryPart = root
             end
@@ -6136,10 +6263,8 @@ local Library; do
                 local rotationX, rotationY = 0, 0
                 local distance = 10
                 local dragging = false -- LMB rotate
-                local panning = false -- RMB origin pan
                 local hovering = false
                 local lastpos = Vector2.zero
-                local panSensitivity = 0.02
                 local lockedScrolls = {} -- [ScrollingFrame] = previous ScrollingEnabled
 
                 pcall(function()
@@ -6169,7 +6294,7 @@ local Library; do
                 end
 
                 local function unlockParentScroll()
-                    if hovering or dragging or panning then
+                    if hovering or dragging then
                         return
                     end
                     for sf, prev in pairs(lockedScrolls) do
@@ -6178,19 +6303,6 @@ local Library; do
                         end
                     end
                     table.clear(lockedScrolls)
-                end
-
-                local function setOriginDelta(move)
-                    local pm = Library.PreviewModel
-                    if not pm then
-                        return
-                    end
-                    Library:SetPreviewOrigins(
-                        (pm.OriginX or 0) + move.X,
-                        (pm.OriginY or 2.85) + move.Y,
-                        (pm.OriginZ or 0) + move.Z,
-                        true
-                    )
                 end
 
                 -- Hover → block parent UI scroll
@@ -6225,21 +6337,6 @@ local Library; do
                         rotationY -= delta.X * 0.01
                         rotationX -= delta.Y * 0.01
                         rotationX = math.clamp(rotationX, -math.pi / 2 + 0.1, math.pi / 2 - 0.1)
-                    elseif panning and isMove then
-                        local delta = Input.Position - lastpos
-                        lastpos = Input.Position
-                        local right = Vector3.new(1, 0, 0)
-                        if ViewportCamera then
-                            local flatRight = Vector3.new(ViewportCamera.CFrame.RightVector.X, 0, ViewportCamera.CFrame.RightVector.Z)
-                            if flatRight.Magnitude > 0.001 then
-                                right = flatRight.Unit
-                            end
-                        end
-                        -- drag moves origin; whole model + ESP follow via PivotTo
-                        setOriginDelta(
-                            right * (delta.X * panSensitivity)
-                                + Vector3.new(0, -delta.Y * panSensitivity, 0)
-                        )
                     end
 
                     -- Zoom while hovering (or while LMB-dragging)
@@ -6255,12 +6352,6 @@ local Library; do
 
                     if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
                         dragging = true
-                        panning = false
-                        lastpos = Input.Position
-                        lockParentScroll()
-                    elseif Input.UserInputType == Enum.UserInputType.MouseButton2 then
-                        panning = true
-                        dragging = false
                         lastpos = Input.Position
                         lockParentScroll()
                     elseif Input.KeyCode == Enum.KeyCode.LeftShift then
@@ -6275,9 +6366,6 @@ local Library; do
 
                     if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
                         dragging = false
-                        unlockParentScroll()
-                    elseif Input.UserInputType == Enum.UserInputType.MouseButton2 then
-                        panning = false
                         unlockParentScroll()
                     elseif Input.KeyCode == Enum.KeyCode.LeftShift then
                         Cfg.ZoomMultiplier = 2
@@ -6295,40 +6383,10 @@ local Library; do
                     end)
                 end
 
-                local function mouseOverPreview()
-                    local root = (Items.Object and Items.Object.Instance) or Items.ViewportFrame.Instance
-                    if not root then
-                        return false
-                    end
-                    local pos = Services.UserInputService:GetMouseLocation()
-                    local absPos = root.AbsolutePosition
-                    local absSize = root.AbsoluteSize
-                    return pos.X >= absPos.X and pos.X <= absPos.X + absSize.X
-                        and pos.Y >= absPos.Y and pos.Y <= absPos.Y + absSize.Y
-                end
-
-                -- UIS fallback: ViewportFrame often misses MouseButton2
-                Library:Connect(Services.UserInputService.InputBegan, function(Input, gameProcessed)
-                    if not Cfg.EnableInputCamera then
-                        return
-                    end
-                    if Input.UserInputType == Enum.UserInputType.MouseButton2 and mouseOverPreview() then
-                        panning = true
-                        dragging = false
-                        lastpos = Input.Position
-                        lockParentScroll()
-                    end
-                end)
-
                 Library:Connect(Services.UserInputService.InputEnded, function(Input)
                     if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
                         if dragging then
                             dragging = false
-                            unlockParentScroll()
-                        end
-                    elseif Input.UserInputType == Enum.UserInputType.MouseButton2 then
-                        if panning then
-                            panning = false
                             unlockParentScroll()
                         end
                     end
@@ -6336,12 +6394,12 @@ local Library; do
 
                 Library:Connect(Services.RunService.RenderStepped, function()
                     if ViewportCamera and Model and Model.PrimaryPart then
-                        if not dragging and not panning and Cfg.AutoRotate then
+                        if not dragging and Cfg.AutoRotate then
                             rotationY += Cfg.RotationSpeed
                         end
 
-                        -- Fixed orbit so RMB origin drag (and ESP box) slide on screen together
-                        local center = Vector3.new(0, 2.85, 0)
+                        -- Track PrimaryPart so ESP box overlay stays locked to the character
+                        local center = Model.PrimaryPart.Position
                         local offset = CFrame.new(0, 0, distance)
                         local rotation = CFrame.Angles(0, rotationY, 0) * CFrame.Angles(rotationX, 0, 0)
                         local camCF = CFrame.new(center) * rotation * offset
@@ -6655,10 +6713,18 @@ local Library; do
                             if ModelDropdown and ModelDropdown.RefreshDropdown then
                                 ModelDropdown:RefreshDropdown(list)
                             end
-                            Library:Notify({
-                                Text = "Models (" .. #list .. "): " .. table.concat(list, ", "),
-                                Lifetime = 3,
-                            })
+                            local stats = Library._PreviewModelsLastSync
+                            local msg = "Models (" .. #list .. ")"
+                            if stats then
+                                msg = string.format(
+                                    "Models %d | dl %d skip %d fail %d",
+                                    stats.Total or #list,
+                                    stats.Downloaded or 0,
+                                    stats.Skipped or 0,
+                                    stats.Failed or 0
+                                )
+                            end
+                            Library:Notify({ Text = msg, Lifetime = 4 })
                         end
                     })
 
